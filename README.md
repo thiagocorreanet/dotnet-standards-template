@@ -1,0 +1,1 @@
+# dotnet-standards-template
