@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+rule_files: ["/etc/prometheus/alerts.yaml"]
+scrape_configs:
+  - job_name: collector-internal
+    static_configs: [{ targets: ["collector:8888"] }]
+  - job_name: modular-api
+    static_configs: [{ targets: ["collector:9464"] }]
+  - job_name: keycloak
+    metrics_path: /metrics
+    static_configs: [{ targets: ["keycloak:9000"] }]
+# Produção: adicionar alerting.alertmanagers com destino privado autenticado; testar o recebimento.

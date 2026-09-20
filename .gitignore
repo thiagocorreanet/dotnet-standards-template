@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+# Node
+node_modules/
+dist/
+.vite/
+# Ambiente
+.env
+*.log
+.DS_Store
+.idea/
+.worktrees/
+.local/
+.secrets/
+.env.*
+!.env.production.example
+artifacts/

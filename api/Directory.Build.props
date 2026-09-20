@@ -1,0 +1,32 @@
+<Project>
+  <PropertyGroup>
+    <IncludeExample Condition="'$(IncludeExample)' == ''">true<!--includeExample--></IncludeExample>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <SatelliteResourceLanguages>pt-BR;en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!--
+      Cada grupo abaixo suprime avisos que realmente ocorrem hoje, com o motivo ao lado.
+      Conferido com `dotnet build ModularApi.slnx -t:Rebuild -p:NoWarn=`; ao acrescentar um código, registre a razão.
+    -->
+    <!-- GenerateDocumentationFile está ligado: documentamos o que o consumidor precisa entender, não todo membro público. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Log estruturado legível é decisão da base: sem LoggerMessage delegates (CA1848), com argumentos avaliados na chamada (CA1873). -->
+    <NoWarn>$(NoWarn);CA1848;CA1873</NoWarn>
+    <!-- Nomes estruturais: "Module" e "Shared" são palavras reservadas em VB (CA1716); métodos de teste usam underscore (CA1707); IntegrationEvent não é EventArgs (CA1711). -->
+    <NoWarn>$(NoWarn);CA1716;CA1707;CA1711</NoWarn>
+    <!-- Custo desproporcional à legibilidade: arrays constantes em migrações geradas e testes (CA1861), membros que poderiam ser estáticos (CA1822), cultura explícita em testes (CA1305), estado de longa duração descartado pelo host (CA1001). -->
+    <NoWarn>$(NoWarn);CA1861;CA1822;CA1305;CA1001</NoWarn>
+    <Authors>Project Team</Authors>
+    <Product>ModularApi</Product>
+  </PropertyGroup>
+</Project>

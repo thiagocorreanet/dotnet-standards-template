@@ -1,0 +1,19 @@
+# Copiar para .env.production (não versionar valores reais).
+# Todas as imagens de produção devem usar @sha256:<digest aprovado pelo CI>.
+API_IMAGE=registry.example/project/api@sha256:REPLACE
+INGRESS_IMAGE=caddy@sha256:REPLACE
+COLLECTOR_IMAGE=otel/opentelemetry-collector-contrib@sha256:REPLACE
+API_DOMAIN=api.example.com
+FRONTEND_ORIGIN=https://app.example.com
+OIDC_AUTHORITY=https://identity.example.com/realms/project
+OIDC_AUDIENCE=modular-api
+DATABASE_RUNTIME_ROLE=api_runtime
+APP_NETWORK_SUBNET=172.30.42.0/24
+TRUSTED_PROXY_IP=172.30.42.2
+RUNTIME_DB_SECRET_FILE=./.secrets/runtime-db
+MIGRATOR_DB_SECRET_FILE=./.secrets/migrator-db
+TLS_CERT_FILE=./.secrets/tls.crt
+TLS_KEY_FILE=./.secrets/tls.key
+TELEMETRY_ENDPOINT_FILE=./.secrets/telemetry-endpoint
+TELEMETRY_AUTH_FILE=./.secrets/telemetry-auth
+COLLECTOR_DATA_DIR=/srv/modular-api/collector

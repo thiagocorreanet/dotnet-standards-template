@@ -1,0 +1,14 @@
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>json,cobertura</Format>
+          <Include>[Shared.*]*,[Module.*]*,[Host.*]*</Include>
+          <ExcludeByFile>**/Migrations/**,**/obj/**</ExcludeByFile>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

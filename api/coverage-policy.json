@@ -1,0 +1,9 @@
+{
+  "total": { "linePercent": 70, "branchPercent": 60 },
+  "files": {
+    "shared/Shared.Messaging/OutboxProcessor.cs": { "linePercent": 80, "branchPercent": 65 },
+    "shared/Shared.Messaging/OutboxProbe.cs": { "linePercent": 90, "branchPercent": 70 },
+    "shared/Shared.Observability/PrivacyLogSink.cs": { "linePercent": 90, "branchPercent": 70 },
+    "shared/Shared.WebHost/Security/OidcAuthenticationExtensions.cs": { "linePercent": 80, "branchPercent": 60 }
+  }
+}

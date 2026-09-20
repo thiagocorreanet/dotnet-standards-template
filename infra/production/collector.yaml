@@ -1,0 +1,65 @@
+# Backend externo autenticado com persistência/retention gerenciada. Nenhuma porta publicada.
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol/storage
+    create_directory: true
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: "0.0.0.0:4317" }
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  transform/privacy:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - delete_key(attributes, "db.statement")
+          - delete_key(attributes, "db.query.text")
+          - delete_key(attributes, "url.full")
+          - delete_key(attributes, "url.query")
+          - delete_key(attributes, "client.address")
+          - delete_key(attributes, "user_agent.original")
+      - context: spanevent
+        statements:
+          - delete_key(attributes, "exception.message")
+          - delete_key(attributes, "exception.stacktrace")
+    log_statements:
+      - context: log
+        statements:
+          - delete_key(attributes, "RequestPath")
+          - delete_key(attributes, "ClientIp")
+          - delete_key(attributes, "UserAgent")
+  batch: { timeout: 5s, send_batch_size: 512 }
+exporters:
+  otlphttp/backend:
+    endpoint: ${file:/run/secrets/telemetry_endpoint}
+    headers:
+      Authorization: ${file:/run/secrets/telemetry_auth}
+    sending_queue: { storage: file_storage, queue_size: 10000 }
+    retry_on_failure: { enabled: true, max_elapsed_time: 300s }
+service:
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus: { host: 0.0.0.0, port: 8888 }
+  # Endpoint interno: coletar por monitor independente. Não publicar 8888 na borda.
+  extensions: [file_storage]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/privacy, batch]
+      exporters: [otlphttp/backend]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/backend]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/privacy, batch]
+      exporters: [otlphttp/backend]

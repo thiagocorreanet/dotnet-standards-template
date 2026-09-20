@@ -1,0 +1,5 @@
+<Project>
+  <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+    <PackageReference Include="coverlet.collector" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

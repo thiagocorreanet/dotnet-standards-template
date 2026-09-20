@@ -1,0 +1,58 @@
+name: verify
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 5 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  dotnet:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with: { global-json-file: api/global.json }
+      - run: dotnet restore api/ModularApi.slnx --locked-mode
+      - run: dotnet test api/ModularApi.slnx --no-restore --nologo -clp:ErrorsOnly --logger trx --collect:"XPlat Code Coverage" --settings api/coverage.runsettings --results-directory artifacts/coverage/current
+      - run: node scripts/check-coverage.mjs artifacts/coverage/current
+      - run: node scripts/check-dependencies.mjs
+      - run: node scripts/validate-production.mjs --fixture
+      - run: node scripts/validate-infra.mjs
+      - run: node scripts/test-template.mjs
+        if: hashFiles('.template.config/template.json') != ''
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: test-and-dependency-results
+          path: |
+            artifacts/coverage/current/**
+            artifacts/security/nuget-audit.json
+          retention-days: 14
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { persist-credentials: false }
+      - run: docker build -f api/src/hosts/Host.Api/Dockerfile -t modular-api:ci api
+      - run: |
+          mkdir -p artifacts/security
+          docker save modular-api:ci -o artifacts/security/api.tar
+          docker run --rm -v "$PWD/artifacts/security:/scan" aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 image --input /scan/api.tar --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --format json --output /scan/container-vulnerabilities.json
+      - run: docker run --rm -v "$PWD/artifacts/security:/scan" aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 image --input /scan/api.tar --format cyclonedx --output /scan/sbom.cdx.json
+        if: always()
+      - run: docker run --rm -v "$PWD:/src:ro" aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 fs --scanners secret --exit-code 1 --skip-dirs /src/artifacts /src
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: supply-chain
+          path: artifacts/security/*.json
+          retention-days: 14
+# Sem publish/deploy automático. A promoção exige aprovação do ambiente e digest aprovado.

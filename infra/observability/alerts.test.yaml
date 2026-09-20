@@ -1,0 +1,82 @@
+rule_files: [alerts.yaml]
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'up{job="collector-internal",instance="collector:8888"}'
+        values: '0 0 0 0 0 0'
+      - series: 'otelcol_exporter_queue_size{exporter="otlp/tempo"}'
+        values: '90 90 90 90 90 90'
+      - series: 'otelcol_exporter_queue_capacity{exporter="otlp/tempo"}'
+        values: '100 100 100 100 100 100'
+      - series: 'otelcol_exporter_send_failed_spans_total{exporter="otlp/tempo"}'
+        values: '0 10 20 30 40 50'
+      - series: 'otelcol_receiver_refused_spans_total{receiver="otlp"}'
+        values: '0 10 20 30 40 50'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: CollectorUnavailable
+        exp_alerts:
+          - exp_labels: { severity: critical, job: collector-internal, instance: 'collector:8888' }
+            exp_annotations:
+              summary: "Collector sem coleta de métricas internas"
+              runbook_url: "docs/runbooks.md#telemetry"
+      - eval_time: 5m
+        alertname: CollectorQueueNearCapacity
+        exp_alerts:
+          - exp_labels: { severity: warning, exporter: otlp/tempo }
+            exp_annotations:
+              summary: "Fila de exportação de telemetria acima de 80%"
+              runbook_url: "docs/runbooks.md#telemetry"
+      - eval_time: 5m
+        alertname: CollectorExportFailures
+        exp_alerts:
+          - exp_labels: { severity: warning, exporter: otlp/tempo }
+            exp_annotations:
+              summary: "Collector falhando ao exportar telemetria"
+              runbook_url: "docs/runbooks.md#telemetry"
+      - eval_time: 5m
+        alertname: CollectorRefusedData
+        exp_alerts:
+          - exp_labels: { severity: warning, receiver: otlp }
+            exp_annotations:
+              summary: "Collector recusando telemetria recebida"
+              runbook_url: "docs/runbooks.md#telemetry"
+  - interval: 1m
+    input_series:
+      - series: 'up{job="collector-internal"}'
+        values: '1 1 1 1 1 1'
+      - series: 'otelcol_exporter_queue_size{exporter="otlp/tempo"}'
+        values: '0 0 0 0 0 0'
+      - series: 'otelcol_exporter_queue_capacity{exporter="otlp/tempo"}'
+        values: '100 100 100 100 100 100'
+      - series: 'otelcol_exporter_send_failed_spans_total{exporter="otlp/tempo"}'
+        values: '0 0 0 0 0 0'
+      - series: 'otelcol_receiver_refused_spans_total{receiver="otlp"}'
+        values: '0 0 0 0 0 0'
+    alert_rule_test:
+      - { eval_time: 5m, alertname: CollectorUnavailable, exp_alerts: [] }
+      - { eval_time: 5m, alertname: CollectorQueueNearCapacity, exp_alerts: [] }
+      - { eval_time: 5m, alertname: CollectorExportFailures, exp_alerts: [] }
+      - { eval_time: 5m, alertname: CollectorRefusedData, exp_alerts: [] }
+  - interval: 1m
+    input_series:
+      - series: 'outbox_dead_letters{module="Probe"}'
+        values: '1 1 1 1 1 1'
+      - series: 'outbox_probe_age_seconds{module="Probe"}'
+        values: '45 45 45 45 45 45'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: OutboxDeadLetter
+        exp_alerts:
+          - exp_labels: { severity: critical, module: Probe }
+            exp_annotations:
+              summary: "Outbox possui falha terminal"
+              runbook_url: "docs/runbooks.md#outbox"
+      - eval_time: 5m
+        alertname: OutboxProbeStale
+        exp_alerts:
+          - exp_labels: { severity: critical, module: Probe }
+            exp_annotations:
+              summary: "Sonda da Outbox sem atualização"
+              runbook_url: "docs/runbooks.md#outbox"

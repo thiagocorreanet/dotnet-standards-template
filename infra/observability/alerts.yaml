@@ -1,0 +1,85 @@
+groups:
+  - name: application
+    rules:
+      - alert: ApiErrorBudgetFastBurn
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{http_route=~"/?api/v1/.*",http_response_status_code=~"5.."}[5m])) /
+           sum(rate(http_server_request_duration_seconds_count{http_route=~"/?api/v1/.*"}[5m])) > 0.0144)
+          and
+          (sum(rate(http_server_request_duration_seconds_count{http_route=~"/?api/v1/.*",http_response_status_code=~"5.."}[1h])) /
+           sum(rate(http_server_request_duration_seconds_count{http_route=~"/?api/v1/.*"}[1h])) > 0.0144)
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Consumo acelerado do orçamento de erros (SLO candidato 99,9%)"
+          runbook_url: "docs/runbooks.md#errors-http"
+      - alert: ApiLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{http_route=~"/?api/v1/.*"}[5m]))) > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 HTTP acima de 500 ms"
+          runbook_url: "docs/runbooks.md#latencia"
+      - alert: OutboxBacklogOld
+        expr: outbox_oldest_pending_seconds > 60
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Mensagem Outbox aguardando há mais de 60 segundos"
+          runbook_url: "docs/runbooks.md#outbox"
+      - alert: OutboxDeadLetter
+        expr: outbox_dead_letters > 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Outbox possui falha terminal"
+          runbook_url: "docs/runbooks.md#outbox"
+      - alert: OutboxProbeStale
+        expr: outbox_probe_age_seconds > 30
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Sonda da Outbox sem atualização"
+          runbook_url: "docs/runbooks.md#outbox"
+      - alert: ApplicationTelemetryMissing
+        expr: absent(outbox_probe_age_seconds)
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Telemetria de aplicação ausente"
+          runbook_url: "docs/runbooks.md#telemetry"
+      - alert: KeycloakUnavailable
+        expr: up{job="keycloak"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Keycloak não responde à sonda de métricas"
+          runbook_url: "docs/runbooks.md#keycloak"
+      - alert: CollectorUnavailable
+        expr: up{job="collector-internal"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Collector sem coleta de métricas internas"
+          runbook_url: "docs/runbooks.md#telemetry"
+      - alert: CollectorQueueNearCapacity
+        expr: otelcol_exporter_queue_size / otelcol_exporter_queue_capacity > 0.8
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Fila de exportação de telemetria acima de 80%"
+          runbook_url: "docs/runbooks.md#telemetry"
+      - alert: CollectorExportFailures
+        expr: sum by (exporter) (rate({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)(_total)?"}[5m])) > 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Collector falhando ao exportar telemetria"
+          runbook_url: "docs/runbooks.md#telemetry"
+      - alert: CollectorRefusedData
+        expr: sum by (receiver) (rate({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)(_total)?"}[5m])) > 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Collector recusando telemetria recebida"
+          runbook_url: "docs/runbooks.md#telemetry"

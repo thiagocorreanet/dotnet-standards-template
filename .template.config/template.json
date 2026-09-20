@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Project Team",
+  "classifications": [
+    "Web",
+    "API",
+    "Modular",
+    "Keycloak"
+  ],
+  "identity": "ModularApi.SecureTemplate",
+  "name": "Modular API — .NET, Keycloak, PostgreSQL, Outbox e OpenTelemetry",
+  "shortName": "modular-api",
+  "sourceName": "ModularApi",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "symbols": {
+    "includeExample": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Incluir exemplo removível de gestão de eventos",
+      "replaces": "true<!--includeExample-->"
+    }
+  },
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        "**/bin/**",
+        "**/obj/**",
+        "**/TestResults/**",
+        ".git/**",
+        ".env",
+        "**/*.feature.cs",
+        "artifacts/**",
+        "docs/reference/**",
+        "docs/architecture-review.md",
+        ".template.config/**",
+        ".local/**",
+        ".secrets/**",
+        ".env.*",
+        "**/*.log"
+      ],
+      "modifiers": [
+        {
+          "condition": "(!includeExample)",
+          "exclude": [
+            "api/src/modules/Module.Events/**",
+            "api/src/modules/Module.Talks/**",
+            "api/src/modules/Module.People/**",
+            "api/src/modules/Module.Venues/**",
+            "api/src/shared/Shared.Contracts/Events/**",
+            "api/src/shared/Shared.Contracts/Talks/**",
+            "api/src/shared/Shared.Contracts/People/**",
+            "api/src/shared/Shared.Contracts/Venues/**",
+            "api/tests/Tests.Unit/Events/**",
+            "api/tests/Tests.Unit/Talks/**",
+            "api/tests/Tests.Unit/People/**",
+            "api/tests/Tests.Unit/Venues/**",
+            "api/tests/Tests.Integration/Events/**",
+            "api/tests/Tests.Integration/Venues/**",
+            "api/tests/Tests.Integration/Modules/**",
+            "api/tests/Tests.Integration/Example/**",
+            "api/tests/Tests.Functional/Features/Events*",
+            "api/tests/Tests.Functional/Features/Venues*",
+            "api/tests/Tests.Functional/Features/People*",
+            "api/tests/Tests.Functional/Features/Talks*",
+            "api/tests/Tests.Functional/Steps/Events*",
+            "api/tests/Tests.Functional/Steps/Venues*",
+            "api/tests/Tests.Functional/Steps/People*",
+            "api/tests/Tests.Functional/Steps/Talks*",
+            "docs/example/**"
+          ]
+        }
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    {
+      "path": "api/ModularApi.slnx"
+    }
+  ]
+}

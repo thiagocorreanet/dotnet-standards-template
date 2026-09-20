@@ -1,0 +1,11 @@
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const report = JSON.parse(execFileSync('dotnet', ['list', 'ModularApi.slnx', 'package', '--vulnerable', '--include-transitive', '--format', 'json'], { cwd: resolve(root, 'api'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }));
+mkdirSync(resolve(root, 'artifacts/security'), { recursive: true });
+writeFileSync(resolve(root, 'artifacts/security/nuget-audit.json'), JSON.stringify(report, null, 2));
+const found = (report.projects ?? []).flatMap(p => (p.frameworks ?? []).flatMap(f => [...(f.topLevelPackages ?? []), ...(f.transitivePackages ?? [])])).filter(p => p.vulnerabilities?.length);
+if (report.logs?.some(x => x.level === 'error') || found.length) throw new Error('Auditoria NuGet falhou; veja artifacts/security/nuget-audit.json.');
+console.log('PASS: nenhuma vulnerabilidade NuGet reportada pela fonte consultada (diretas e transitivas).');

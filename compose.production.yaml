@@ -1,0 +1,91 @@
+# Independente de compose.local.yaml. NÃO combinar os dois com -f.
+name: ${COMPOSE_PROJECT_NAME:-modular-api-production}
+services:
+  migrate:
+    image: ${API_IMAGE:?Informe imagem imutável com digest}
+    command: ["migrate"]
+    environment: &production-environment
+      ASPNETCORE_ENVIRONMENT: Production
+      Oidc__Authority: ${OIDC_AUTHORITY:?Configure o realm HTTPS}
+      Oidc__Audience: ${OIDC_AUDIENCE:?Configure a audiência da API}
+      Oidc__RequireHttpsMetadata: "true"
+      Oidc__MaxAccessTokenLifetimeSeconds: "300"
+      Database__MigrateOnStartup: "false"
+      Database__RuntimeRole: ${DATABASE_RUNTIME_ROLE:?}
+      AllowedHosts: ${API_DOMAIN:?}
+      ReverseProxy__KnownProxies__0: ${TRUSTED_PROXY_IP:?}
+      OpenApi__Enabled: "false"
+    secrets:
+      - source: migrator-db
+        target: ConnectionStrings__ModularApi
+    networks: [application]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: "no"
+  api:
+    image: ${API_IMAGE:?}
+    environment:
+      <<: *production-environment
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://collector:4317
+      Observability__TraceSampleRatio: "0.1"
+      Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:?Origem HTTPS exata do cliente}
+    secrets:
+      - source: runtime-db
+        target: ConnectionStrings__ModularApi
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [application]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 768m
+    cpus: "2"
+  ingress:
+    image: ${INGRESS_IMAGE:?Informe Caddy com digest}
+    user: "1000:1000"
+    environment: { API_DOMAIN: "${API_DOMAIN:?}" }
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    ports: ["443:8443"]
+    volumes: ["./infra/production/Caddyfile:/etc/caddy/Caddyfile:ro"]
+    secrets: [tls_cert, tls_key]
+    depends_on:
+      api: { condition: service_healthy }
+    networks:
+      application: { ipv4_address: "${TRUSTED_PROXY_IP:?}" }
+    read_only: true
+    tmpfs: [/tmp, /data, /config]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    mem_limit: 128m
+  collector:
+    image: ${COLLECTOR_IMAGE:?Informe Collector contrib com digest}
+    command: ["--config=/etc/otelcol/config.yaml"]
+    user: "10001:10001"
+    volumes:
+      - ./infra/production/collector.yaml:/etc/otelcol/config.yaml:ro
+      - ${COLLECTOR_DATA_DIR:?Diretório persistente UID 10001}:/var/lib/otelcol
+    secrets: [telemetry_endpoint, telemetry_auth]
+    networks: [application]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    mem_limit: 384m
+networks:
+  application:
+    ipam:
+      config: [{ subnet: "${APP_NETWORK_SUBNET:?Selecione rede sem conflito}" }]
+secrets:
+  runtime-db: { file: "${RUNTIME_DB_SECRET_FILE:?}" }
+  migrator-db: { file: "${MIGRATOR_DB_SECRET_FILE:?}" }
+  tls_cert: { file: "${TLS_CERT_FILE:?}" }
+  tls_key: { file: "${TLS_KEY_FILE:?}" }
+  telemetry_endpoint: { file: "${TELEMETRY_ENDPOINT_FILE:?}" }
+  telemetry_auth: { file: "${TELEMETRY_AUTH_FILE:?}" }

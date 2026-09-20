@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Host.Api</RootNamespace>
+    <UserSecretsId>modular-api-host-api</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <ProjectReference Include="../../shared/Shared.WebHost/Shared.WebHost.csproj" />
+    <ProjectReference Include="../../modules/Module.Venues/Module.Venues.csproj" Condition="'$(IncludeExample)' == 'true'" />
+    <ProjectReference Include="../../modules/Module.People/Module.People.csproj" Condition="'$(IncludeExample)' == 'true'" />
+    <ProjectReference Include="../../modules/Module.Events/Module.Events.csproj" Condition="'$(IncludeExample)' == 'true'" />
+    <ProjectReference Include="../../modules/Module.Talks/Module.Talks.csproj" Condition="'$(IncludeExample)' == 'true'" />
+    <ProjectReference Include="../../modules/Module.Identity/Module.Identity.csproj" />
+    <ProjectReference Include="../../modules/Module.Audit/Module.Audit.csproj" />
+  </ItemGroup>
+</Project>
