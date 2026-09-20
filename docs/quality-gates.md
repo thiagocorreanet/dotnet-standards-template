@@ -18,6 +18,8 @@ Pisos em `api/coverage-policy.json`: total 70% de linhas e 60% de branches; gate
 
 ## Release e verificações periódicas
 
+O workflow `codeql` analisa C# e workflows em push, pull request e semanalmente; os alertas ficam na aba Security do repositório e não bloqueiam o merge por si. O workflow `dependency-review` roda só em pull request e falha em severidade alta introduzida pelo diff. O `.github/dependabot.yml` abre PR semanal para NuGet, Docker e actions; um PR de NuGet que não atualizar os `packages.lock.json` falha no `--locked-mode` do `verify`, e a correção é rodar `dotnet restore --force-evaluate` no branch do PR.
+
 O workflow `operational-release-checks` provisiona uma fixture local nova no runner, verifica OIDC real/telemetria, imagem em Production e restore lógico. Executa manualmente, em tags v* e semanalmente. O workflow `verify` testa também semanalmente para reconsultar vulnerabilidades sem depender de alterações de código.
 
 O ambiente local precisa dos serviços de `compose.local.yaml --profile observability`. `init-local.mjs` só serve para uma fixture nova: não sobrescreve credenciais. Em ambiente já provisionado, preserve .env/.local e volumes.

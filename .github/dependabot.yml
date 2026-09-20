@@ -1,0 +1,34 @@
+version: 2
+updates:
+  # As actions são pinadas por SHA de propósito; sem este bloco, nada atualiza o pin.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+
+  # Versões ficam em api/Directory.Packages.props; o PR precisa atualizar os packages.lock.json.
+  - package-ecosystem: nuget
+    directory: /api
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      dotnet-minor-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /api/src/hosts/Host.Api
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 3

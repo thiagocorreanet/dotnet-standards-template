@@ -1,0 +1,50 @@
+name: codeql
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '40 5 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: csharp
+            build-mode: manual
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        if: matrix.build-mode == 'manual'
+        with: { global-json-file: api/global.json }
+      - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      # A extração de C# acompanha uma compilação real; o restore travado é o mesmo do verify.
+      - run: dotnet restore api/ModularApi.slnx --locked-mode
+        if: matrix.build-mode == 'manual'
+      - run: dotnet build api/ModularApi.slnx --no-restore --nologo --configuration Release
+        if: matrix.build-mode == 'manual'
+      - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          category: /language:${{ matrix.language }}
+# Análise estática publicada na aba Security. Não substitui os testes de segurança em PostgreSQL real.

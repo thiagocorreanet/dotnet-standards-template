@@ -208,7 +208,7 @@ node scripts/validate-infra.mjs
 
 No repositório do template, `node scripts/test-template.mjs` gera e testa projetos com e sem exemplo em uma pasta temporária isolada. Integração e testes funcionais usam PostgreSQL real via Testcontainers.
 
-O pipeline GitHub Actions executa testes com gates de cobertura, auditoria NuGet, validações de configuração, scan de segredos e da imagem, e gera SBOM. Um workflow separado verifica OIDC/telemetria reais da fixture local, host em Production e restore lógico. Não publica nem implanta automaticamente. Consulte [verificações de qualidade](docs/quality-gates.md) para os comandos e limites.
+O pipeline GitHub Actions executa testes com gates de cobertura, auditoria NuGet, validações de configuração, scan de segredos e da imagem, e gera SBOM. O CodeQL analisa o C# e os próprios workflows, e publica o resultado na aba Security. Em pull request, a dependency review recusa dependência vulnerável introduzida naquele diff. O Dependabot abre PR semanal para NuGet, Docker e para as actions pinadas por SHA. Um workflow separado verifica OIDC/telemetria reais da fixture local, host em Production e restore lógico. Não publica nem implanta automaticamente. Consulte [verificações de qualidade](docs/quality-gates.md) para os comandos e limites.
 
 ## Documentação e limites
 
