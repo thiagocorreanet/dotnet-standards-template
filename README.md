@@ -1,121 +1,121 @@
 # Modular API Template — .NET 10
 
-Base de API em .NET 10 publicada como código aberto para quem vai começar um serviço e não quer decidir de novo autenticação, auditoria, migrações, concorrência e telemetria. Instala como template do `dotnet new` e gera um projeto independente: a cópia não recebe atualizações futuras deste repositório.
+A .NET 10 API base, published as open source for anyone starting a service who would rather not decide authentication, auditing, migrations, concurrency and telemetry all over again. It installs as a `dotnet new` template and generates an independent project: the copy gets no later updates from this repository.
 
-O desenho é um monolito modular. Um processo ASP.NET Core hospeda módulos que não se referenciam entre si, um PostgreSQL guarda um schema por módulo, o Keycloak emite os tokens e a API decide quem pode agir sobre cada recurso. Escrita de negócio entra por uma fronteira transacional com lock no PostgreSQL. O evento vai para a Outbox na mesma transação do estado. Log, métrica e trace saem por uma rota só, sem dado pessoal.
+The design is a modular monolith. One ASP.NET Core process hosts modules that do not reference each other, one PostgreSQL holds one schema per module, Keycloak issues the tokens and the API decides who may act on each resource. A business write enters through a transactional boundary with a PostgreSQL lock. The event goes to the Outbox in the same transaction as the state. Logs, metrics and traces leave through a single route, with no personal data.
 
-O núcleo não conhece gestão de eventos. Este repositório inclui um exemplo removível para demonstrar concorrência, propriedade de recursos e comunicação entre módulos. **A geração padrão não inclui esse domínio.**
+The core knows nothing about event management. This repository ships a removable example that demonstrates concurrency, resource ownership and module-to-module communication. **The default generation does not include that domain.**
 
-Para o frontend existe um template irmão, com a mesma ideia de regras em Markdown: [react-standards-template](https://github.com/thiagocorreanet/react-standards-template).
+There is a sibling template for the frontend, built on the same idea of rules written in Markdown: [react-standards-template](https://github.com/thiagocorreanet/react-standards-template).
 
-## O que já vem resolvido
+## What is already solved
 
-| Capacidade | Onde mora |
+| Capability | Where it lives |
 |---|---|
-| Autenticação OIDC com Keycloak e identidade interna derivada de `(issuer, subject)` | `Module.Identity` |
-| Auditoria append-only por interceptor, com valores mascarados por padrão | `Module.Audit` e `Shared.Data` |
-| Fronteira transacional por comando, advisory lock e prova de commit | `Shared.Http` e `Shared.Data` |
-| Outbox transacional com claim token, dead letter e replay auditado | `Shared.Messaging` |
-| Serilog e OpenTelemetry por uma rota, com sanitização de logs e traces | `Shared.Observability` |
-| Testes que recusam dependência entre módulos e tipos com `Repository` no nome | `api/tests/Tests.Architecture` |
-| Geração do projeto com e sem o domínio de exemplo | `.template.config` e `scripts/test-template.mjs` |
+| OIDC authentication with Keycloak and an internal identity derived from `(issuer, subject)` | `Module.Identity` |
+| Append-only auditing through an interceptor, with values masked by default | `Module.Audit` and `Shared.Data` |
+| Transactional boundary per command, advisory lock and proof of commit | `Shared.Http` and `Shared.Data` |
+| Transactional Outbox with claim token, dead letter and audited replay | `Shared.Messaging` |
+| Serilog and OpenTelemetry through one route, with log and trace sanitization | `Shared.Observability` |
+| Tests that refuse dependencies between modules and types named `Repository` | `api/tests/Tests.Architecture` |
+| Project generation with and without the example domain | `.template.config` and `scripts/test-template.mjs` |
 
-## Visão geral
+## Overview
 
 ```mermaid
 flowchart LR
-    subgraph Host["Host.Api — um processo ASP.NET Core"]
+    subgraph Host["Host.Api — one ASP.NET Core process"]
         direction TB
-        WebHost["Shared.WebHost<br/>pipeline, OIDC, descoberta de módulos"]
+        WebHost["Shared.WebHost<br/>pipeline, OIDC, module discovery"]
         Core["Module.Identity<br/>Module.Audit"]
-        Example["Module.Events, People, Talks e Venues<br/>exemplo removível"]
+        Example["Module.Events, People, Talks and Venues<br/>removable example"]
         WebHost --> Core
         WebHost --> Example
     end
 
-    Client["Cliente HTTP"] --> WebHost
-    Keycloak["Keycloak<br/>emite e assina os tokens"] -. "discovery e JWKS" .-> WebHost
-    Core --> PG[("PostgreSQL<br/>um schema por módulo:<br/>Identity, Audit, Events,<br/>People, Talks, Venues")]
+    Client["HTTP client"] --> WebHost
+    Keycloak["Keycloak<br/>issues and signs the tokens"] -. "discovery and JWKS" .-> WebHost
+    Core --> PG[("PostgreSQL<br/>one schema per module:<br/>Identity, Audit, Events,<br/>People, Talks, Venues")]
     Example --> PG
     Host --> Collector["OpenTelemetry Collector"]
-    Collector --> Backend["Local: Prometheus, Tempo, Loki e Grafana<br/>Produção: backend OTLP escolhido pela operação"]
+    Collector --> Backend["Local: Prometheus, Tempo, Loki and Grafana<br/>Production: OTLP backend chosen by operations"]
 ```
 
-Cada módulo expõe uma classe `IModule` com seus endpoints, exatamente um `DbContext` e uma `IModuleAccessPolicy`. A descoberta é por varredura de assembly no `Shared.WebHost`, então remover os módulos de exemplo não exige tocar no núcleo. A API não guarda senha de usuário nem chave de assinatura: valida a assinatura RSA, o issuer, a audience e o prazo do token, e recusa um token válido sem vínculo local ativo.
+Each module exposes an `IModule` class with its endpoints, exactly one `DbContext` and one `IModuleAccessPolicy`. Discovery is assembly scanning in `Shared.WebHost`, so removing the example modules takes no change to the core. The API stores no user password and no signing key: it validates the RSA signature, the issuer, the audience and the token lifetime, and refuses a valid token that has no active local binding.
 
-## Fronteira entre módulos
+## Module boundary
 
 ```mermaid
 flowchart TB
-    subgraph allowed["Permitido"]
+    subgraph allowed["Allowed"]
         direction LR
         P1["Module.People"] --> K["Shared.Contracts<br/>IPeopleModuleApi<br/>people.person-created.v1"] --> E1["Module.Events"]
     end
-    subgraph blocked["Recusado pelos testes de arquitetura"]
+    subgraph blocked["Refused by the architecture tests"]
         direction LR
-        P2["Module.People"] -->|"qualquer referência direta"| E2["Module.Events"]
+        P2["Module.People"] -->|"any direct reference"| E2["Module.Events"]
     end
     allowed ~~~ blocked
 ```
 
-Um módulo referencia apenas `Shared.*`. Conversa síncrona passa por uma interface de `Shared.Contracts`; conversa assíncrona, por um evento de integração com nome estável `contexto.fato.v1`. Os contratos transportam DTOs. Entidade do EF e `IQueryable` não atravessam essa linha, e um módulo também não chama outro por HTTP dentro do mesmo processo. Não existe FK entre schemas de módulos diferentes.
+A module references only `Shared.*`. Synchronous conversation goes through an interface in `Shared.Contracts`; asynchronous conversation goes through an integration event with a stable `context.fact.v1` name. Contracts carry DTOs. EF entities and `IQueryable` do not cross that line, and one module does not call another over HTTP inside the same process. There is no FK between schemas of different modules.
 
-## Caminho de uma escrita
+## The path of a write
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant C as Cliente
-    participant P as Pipeline HTTP<br/>JWT, rate limit, policy do endpoint
+    participant C as Client
+    participant P as HTTP pipeline<br/>JWT, rate limit, endpoint policy
     participant V as ValidationFilter<br/>FluentValidation
     participant T as TelemetryUseCaseDecorator
     participant X as TransactionalUseCaseDecorator
     participant A as AuthorizedUseCaseDecorator
-    participant U as UseCase e domínio
+    participant U as UseCase and domain
     participant PG as PostgreSQL
 
-    C->>P: POST com Bearer JWT
-    P->>V: identificadores de rota materializados no request
-    V->>T: request válido
-    T->>X: comando com chave de consistência
-    X->>PG: BEGIN e advisory lock da chave
-    X->>A: já sob transação e lock
-    A->>A: policy do módulo decide sobre o recurso e o dono
-    A->>U: autorizado
-    U->>PG: estado, eventos na Outbox e CommandReceipt
+    C->>P: POST with Bearer JWT
+    P->>V: route identifiers materialized into the request
+    V->>T: valid request
+    T->>X: command with a consistency key
+    X->>PG: BEGIN and advisory lock on the key
+    X->>A: already under transaction and lock
+    A->>A: module policy decides on the resource and its owner
+    A->>U: authorized
+    U->>PG: state, events in the Outbox and CommandReceipt
     X->>PG: COMMIT
-    PG-->>X: confirmação
-    X-->>C: 201, ou 503 quando o commit não pode ser verificado
+    PG-->>X: confirmation
+    X-->>C: 201, or 503 when the commit cannot be verified
 ```
 
-A ordem importa: o lock é adquirido antes de qualquer leitura, validação de invariante ou decisão de autorização. Toda escrita de negócio é um caso de uso marcado com `[Command("chave")]`, e escritores que compartilham uma invariante declaram a mesma chave, o que serializa essas escritas. É custo deliberado, não desenho para alto throughput.
+The order matters: the lock is taken before any read, invariant check or authorization decision. Every business write is a use case marked with `[Command("key")]`, and writers that share an invariant declare the same key, which serializes those writes. That is a deliberate cost, not a design for high throughput.
 
-Uma falha transitória descarta o escopo e repete tudo desde a autorização, com `DbContext` novo (padrão: 3 tentativas). Um caso de uso não pode, portanto, guardar estado entre tentativas nem provocar efeito externo; a intenção vai para a Outbox. Se a confirmação do commit falhar, uma conexão nova procura o `CommandReceipt` gravado na mesma transação. Sem essa prova, a resposta é 503 de resultado indeterminado: a base não declara rollback nem sucesso.
+A transient failure drops the scope and repeats everything from authorization on, with a fresh `DbContext` (3 attempts by default). A use case therefore cannot hold state between attempts or cause an external effect; the intent goes to the Outbox instead. If the commit confirmation fails, a new connection looks for the `CommandReceipt` written in the same transaction. Without that proof the answer is 503, an indeterminate result: the base declares neither rollback nor success.
 
-Consultas sem `[Command]` pulam a decoração transacional e rodam no escopo da requisição, mas ainda passam pela policy do módulo.
+Queries without `[Command]` skip the transactional decoration and run in the request scope, but they still go through the module policy.
 
-## Eventos e Outbox
+## Events and Outbox
 
 ```mermaid
 flowchart TB
-    W["Comando grava estado e evento<br/>na mesma transação"] --> P["Mensagem pendente<br/>no schema do módulo"]
-    P --> CL["OutboxProcessor reivindica a mensagem<br/>com token e lease de 60 s"]
-    CL --> H["Handlers in-process,<br/>um escopo DI por mensagem"]
-    H -->|"sucesso"| D["ProcessedOn preenchido,<br/>retenção de 7 dias"]
-    H -->|"falha"| R["Próxima tentativa agendada"]
+    W["A command writes state and event<br/>in the same transaction"] --> P["Pending message<br/>in the module schema"]
+    P --> CL["OutboxProcessor claims the message<br/>with a token and a 60 s lease"]
+    CL --> H["In-process handlers,<br/>one DI scope per message"]
+    H -->|"success"| D["ProcessedOn set,<br/>7-day retention"]
+    H -->|"failure"| R["Next attempt scheduled"]
     R --> P
-    R -->|"10 tentativas"| L["Dead letter, estado terminal"]
-    L -->|"replay manual, com ator e reasonCode"| P
-    Probe["OutboxProbe"] -. "pendentes, dead letters e<br/>idade do mais antigo" .-> P
+    R -->|"10 attempts"| L["Dead letter, terminal state"]
+    L -->|"manual replay, with actor and reasonCode"| P
+    Probe["OutboxProbe"] -. "pending, dead letters and<br/>age of the oldest one" .-> P
 ```
 
-A entrega é pelo menos uma vez e não preserva ordem entre réplicas, então todo consumidor precisa ser idempotente por evento e por consumidor. A auditoria faz isso com a chave do evento e `INSERT ON CONFLICT`. Cada módulo tem sua própria sequência de entregas; `Outbox:MaxConcurrentDeliveries` limita as entregas ativas por processo. Dead letter é terminal: o replay exige administrador, registra ator e `reasonCode`, e nunca acontece sozinho.
+Delivery is at least once and preserves no order across replicas, so every consumer has to be idempotent per event and per consumer. Auditing does that with the event key and `INSERT ON CONFLICT`. Each module has its own delivery sequence; `Outbox:MaxConcurrentDeliveries` caps the active deliveries per process. Dead letter is terminal: replay takes an administrator, records the actor and a `reasonCode`, and never happens on its own.
 
-## Criar um projeto novo
+## Create a new project
 
-Requisitos: SDK indicado em `api/global.json`, Docker com Compose, Node.js 22+ e OpenSSL para validações de infraestrutura.
+Requirements: the SDK pinned in `api/global.json`, Docker with Compose, Node.js 22+ and OpenSSL for the infrastructure validations.
 
-Na pasta deste template:
+From this template's folder:
 
 ```bash
 dotnet new install .
@@ -125,17 +125,17 @@ dotnet restore
 dotnet test
 ```
 
-Para incluir a demonstração:
+To include the demonstration:
 
 ```bash
 dotnet new modular-api -n SampleCompany -o ../sample-company-example --includeExample true
 ```
 
-A geração renomeia a solução, o nome de serviço, namespaces e chave da conexão. Realm/audience/roles são configurações que você deve adaptar ao produto. O script local cria um nome de projeto Compose próprio; as portas padrão ainda precisam ser distintas se executar vários projetos simultaneamente.
+Generation renames the solution, the service name, the namespaces and the connection key. Realm, audience and roles are settings you adapt to your product. The local script creates its own Compose project name; the default ports still have to differ if you run several projects at the same time.
 
-Não reutilize `bin/`, `obj/`, `.env`, volumes nem bancos entre projetos. Após o primeiro restore, versione os `packages.lock.json` gerados com o seu projeto.
+Do not reuse `bin/`, `obj/`, `.env`, volumes or databases across projects. After the first restore, commit the generated `packages.lock.json` files with your project.
 
-## Executar o ambiente local
+## Run the local environment
 
 ```bash
 node scripts/init-local.mjs
@@ -145,59 +145,59 @@ node scripts/smoke-oidc.mjs
 node scripts/smoke-observability.mjs
 ```
 
-Aguarde a importação do realm antes do bootstrap. Se o Keycloak ainda não estiver pronto, repita **somente o bootstrap**, não a geração de credenciais. Ele aceita apenas uma base de identidades vazia e nunca reeleva usuários ao reiniciar.
+Wait for the realm import before the bootstrap. If Keycloak is not ready yet, repeat **only the bootstrap**, not the credential generation. It accepts an empty identity base only, and never re-elevates users on restart.
 
-| Serviço | Endereço local |
+| Service | Local address |
 |---|---|
-| API / Scalar de desenvolvimento | http://localhost:5761/scalar |
+| API / development Scalar | http://localhost:5761/scalar |
 | Keycloak | http://identity.localhost:8080 |
-| Grafana, usuário `operator` | http://localhost:3000 |
+| Grafana, user `operator` | http://localhost:3000 |
 | Prometheus | http://localhost:9090 |
 | PostgreSQL | `127.0.0.1:55432` |
 
-O Scalar é a interface padrão também nos projetos gerados. A raiz `/` redireciona para `/scalar`; os contratos continuam em `/openapi/v1.json` e `/openapi/v1.yaml`. UI e contratos só são publicados em `Development` com `OpenApi:Enabled=true`. O Swagger UI foi removido.
+Scalar is the default interface in generated projects too. The root `/` redirects to `/scalar`; the contracts stay at `/openapi/v1.json` and `/openapi/v1.yaml`. UI and contracts are published only in `Development` with `OpenApi:Enabled=true`. Swagger UI was removed.
 
-Para testar operações protegidas, informe no esquema `Bearer` um access token obtido no Keycloak/OIDC, sem o prefixo `Bearer`. Não há token ou segredo pré-preenchido nem persistência de autenticação habilitada. Os assets são servidos localmente; fontes externas, telemetria do fornecedor e o Agent do Scalar ficam desabilitados. A observabilidade da API permanece ativa. A integração segue a [documentação oficial do Scalar](https://scalar.com/products/api-references/integrations/aspnetcore/integration).
+To exercise protected operations, put an access token obtained from Keycloak/OIDC into the `Bearer` scheme, without the `Bearer` prefix. There is no pre-filled token or secret, and authentication persistence is off. Assets are served locally; external fonts, vendor telemetry and the Scalar Agent are disabled. API observability stays on. The integration follows the [official Scalar documentation](https://scalar.com/products/api-references/integrations/aspnetcore/integration).
 
-As senhas são aleatórias e ficam em `.env` (0600). A conta de demonstração da API é `developer`; a administração inicial do Keycloak usa `bootstrap-admin`. Nunca copie essas contas para produção. Se o navegador não resolver `identity.localhost`, configure esse nome para `127.0.0.1`; não mude apenas a URL do login, porque o issuer precisa permanecer igual.
+Passwords are random and live in `.env` (0600). The API demo account is `developer`; the initial Keycloak administration uses `bootstrap-admin`. Never copy those accounts to production. If your browser does not resolve `identity.localhost`, point that name at `127.0.0.1`; do not change only the login URL, because the issuer has to stay the same.
 
-`init-local.mjs` não sobrescreve credenciais. `.local/` é privado no host e seus arquivos são montados somente para leitura nos containers. As portas locais são vinculadas ao loopback.
+`init-local.mjs` does not overwrite credentials. `.local/` is private on the host and its files are mounted read-only into the containers. Local ports are bound to the loopback.
 
-O import do realm é inicial: editar realm.json não atualiza automaticamente um realm já existente. Faça mudanças pelo processo administrativo do Keycloak; não apague volumes para aplicar uma alteração.
+The realm import is initial: editing realm.json does not update an existing realm. Make changes through Keycloak's administrative process, and do not delete volumes to apply one.
 
-Se `.env` e o vínculo inicial já existem **nesta versão em inglês**, retome apenas com `docker compose -f compose.local.yaml --profile observability up --build -d`. Não execute init-local nem bootstrap novamente. Um ambiente criado antes da padronização para inglês não é compatível automaticamente: preserve-o e use um projeto/banco novo ou um plano explícito de migração.
+If `.env` and the initial binding already exist **in this English version**, resume with `docker compose -f compose.local.yaml --profile observability up --build -d` alone. Do not run init-local or bootstrap again. An environment created before the move to English is not automatically compatible: keep it and use a new project and database, or an explicit migration plan.
 
-Para parar preservando dados:
+To stop while preserving data:
 
 ```bash
 docker compose -f compose.local.yaml --profile observability down
 ```
 
-Não use `down -v` se quiser preservar bancos, históricos e telemetria.
+Do not use `down -v` if you want to keep databases, history and telemetry.
 
-## Estrutura
+## Structure
 
 ```text
 api/
-  src/hosts/Host.Api           composição e comandos operacionais
-  src/modules/Module.Identity  vínculo OIDC e acesso local
-  src/modules/Module.Audit   consulta administrativa append-only
-  src/modules/Module.*           módulos opcionais de negócio
-  src/shared/Shared.Contracts    contratos, identidade e eventos
-  src/shared/Shared.Http         casos de uso, validação e transação
-  src/shared/Shared.Data         EF, auditoria, Outbox e migrações
-  src/shared/Shared.Messaging    entrega in-process e processamento
-  src/shared/Shared.Observability logs, métricas e traces
-  src/shared/Shared.WebHost      composição HTTP e segurança
-  tests/                        Unit, Integration, Functional, Architecture
-infra/                          configurações locais e produtivas separadas
-scripts/                        testes de protocolo, restore e validações
-docs/                           decisões, segurança, operação e rastreabilidade
+  src/hosts/Host.Api           composition and operational commands
+  src/modules/Module.Identity  OIDC binding and local access
+  src/modules/Module.Audit     append-only administrative query
+  src/modules/Module.*         optional business modules
+  src/shared/Shared.Contracts  contracts, identity and events
+  src/shared/Shared.Http       use cases, validation and transaction
+  src/shared/Shared.Data       EF, auditing, Outbox and migrations
+  src/shared/Shared.Messaging  in-process delivery and processing
+  src/shared/Shared.Observability logs, metrics and traces
+  src/shared/Shared.WebHost    HTTP composition and security
+  tests/                       Unit, Integration, Functional, Architecture
+infra/                         local and production configuration, kept apart
+scripts/                       protocol tests, restore and validations
+docs/                          decisions, security, operation and traceability
 ```
 
-Sem dependências diretas entre módulos, repositório genérico, broker obrigatório ou microsserviços. Cada módulo possui seu schema e seu DbContext; EF Core é usado diretamente. A autorização de recurso ocorre dentro da fronteira transacional dos comandos.
+No direct dependencies between modules, no generic repository, no mandatory broker, no microservices. Each module owns its schema and its DbContext; EF Core is used directly. Resource authorization happens inside the transactional boundary of the commands.
 
-## Verificar
+## Verify
 
 ```bash
 dotnet test api/ModularApi.slnx --nologo -clp:ErrorsOnly
@@ -206,55 +206,57 @@ node scripts/validate-production.mjs --fixture
 node scripts/validate-infra.mjs
 ```
 
-No repositório do template, `node scripts/test-template.mjs` gera e testa projetos com e sem exemplo em uma pasta temporária isolada. Integração e testes funcionais usam PostgreSQL real via Testcontainers.
+In the template repository, `node scripts/test-template.mjs` generates and tests projects with and without the example, in an isolated temporary folder. Integration and functional tests use a real PostgreSQL through Testcontainers.
 
-O pipeline GitHub Actions executa testes com gates de cobertura, auditoria NuGet, validações de configuração, scan de segredos e da imagem, e gera SBOM. O CodeQL analisa o C# e os próprios workflows, e publica o resultado na aba Security. Em pull request, a dependency review recusa dependência vulnerável introduzida naquele diff. O Dependabot abre PR semanal para NuGet, Docker e para as actions pinadas por SHA. Um workflow separado verifica OIDC/telemetria reais da fixture local, host em Production e restore lógico. Não publica nem implanta automaticamente. Consulte [verificações de qualidade](docs/quality-gates.md) para os comandos e limites.
+The GitHub Actions pipeline runs the tests with coverage gates, the NuGet audit, the configuration validations, secret and image scanning, and produces an SBOM. CodeQL analyzes the C# and the workflows themselves, and publishes the result in the Security tab. On pull requests, dependency review refuses a vulnerable dependency introduced by that diff. Dependabot opens a weekly PR for NuGet, Docker and for the SHA-pinned actions. A separate workflow checks real OIDC and telemetry against the local fixture, the host in Production and a logical restore. Nothing is published or deployed automatically. See [quality gates](docs/quality-gates.md) for the commands and their limits.
 
-## Documentação e limites
+## Documentation and limits
 
-- [Guia de instalação e reutilização em um projeto novo](docs/installation-guide.md)
-- [Convenções de idioma e compatibilidade](docs/language-conventions.md)
-- [Arquitetura e decisões](docs/architecture.md)
-- [Arquitetura aplicada: decidir dentro do monolito modular](docs/architecture-practices.md)
-- [Boas práticas de .NET e C# nesta base](docs/dotnet-practices.md)
-- [Criar um módulo e adaptar o template](docs/extending.md)
-- [Identidade, autorização e privacidade](docs/security.md)
-- [Execução, incidentes, backup e produção](docs/runbooks.md)
-- [Cobertura do documento original](docs/implementation-status.md), disponível no repositório de origem
-- [Revisão técnica da entrega](docs/technical-review.md), disponível no repositório de origem
-- [Correções da reavaliação de qualidade](docs/corrections-review.md)
-- [Gates de testes, cobertura e release](docs/quality-gates.md)
+The documents below are written in pt-BR, as are the human-facing messages in the code.
 
-É uma base implementada e testada, não uma declaração de prontidão universal para produção. Frontend, multi-tenancy, migração de usuários do sistema antigo, SLO/RPO/RTO aprovados, retenção legal, HA do IdP e roteamento de alertas dependem do produto e do ambiente. Essas dependências estão identificadas na matriz; não são tratadas como lacunas encerradas por um teste local.
+- [Installation and reuse in a new project](docs/installation-guide.md)
+- [Language conventions and compatibility](docs/language-conventions.md)
+- [Architecture and decisions](docs/architecture.md)
+- [Applied architecture: deciding inside the modular monolith](docs/architecture-practices.md)
+- [.NET and C# practices in this base](docs/dotnet-practices.md)
+- [Creating a module and adapting the template](docs/extending.md)
+- [Identity, authorization and privacy](docs/security.md)
+- [Running, incidents, backup and production](docs/runbooks.md)
+- [Coverage of the original document](docs/implementation-status.md), available in the source repository
+- [Technical review of the delivery](docs/technical-review.md), available in the source repository
+- [Corrections from the quality re-assessment](docs/corrections-review.md)
+- [Test, coverage and release gates](docs/quality-gates.md)
 
-**Banco novo:** as migrações desta base não são um upgrade suportado da antiga autenticação ASP.NET Identity **nem da versão deste template com nomes em português**. Não aponte o migrador para esses bancos. O migrador recusa históricos em schemas não registrados antes de aplicar qualquer migração; isso é uma proteção, não uma conversão de dados.
+This is an implemented and tested base, not a claim of universal production readiness. Frontend, multi-tenancy, migrating users from an older system, approved SLO/RPO/RTO, legal retention, IdP high availability and alert routing depend on the product and the environment. Those dependencies are identified in the matrix; they are not treated as gaps closed by a local test.
 
-## Trabalhar com agentes de IA
+**New database:** the migrations in this base are not a supported upgrade from the old ASP.NET Identity authentication **or from the version of this template with Portuguese names**. Do not point the migrator at those databases. The migrator refuses histories in unregistered schemas before applying any migration; that is a protection, not a data conversion.
 
-As regras do projeto são texto em Markdown, lido por pessoas e por agentes:
+## Working with AI agents
 
-| Arquivo | Para quê |
+The project rules are text in Markdown, read by people and by agents:
+
+| File | What for |
 |---|---|
-| [`CLAUDE.md`](CLAUDE.md) | contrato de trabalho: invariantes, onde cada código mora, armadilhas da base |
-| [`AGENTS.md`](AGENTS.md) | os mesmos invariantes em forma condensada, para outros agentes |
-| [`docs/architecture-practices.md`](docs/architecture-practices.md) | onde uma regra mora e quando um padrão novo se justifica |
-| [`docs/dotnet-practices.md`](docs/dotnet-practices.md) | o código do dia a dia em .NET e C# |
+| [`CLAUDE.md`](CLAUDE.md) | the working contract: invariants, where each piece of code lives, the traps in this base |
+| [`AGENTS.md`](AGENTS.md) | the same invariants in condensed form, for other agents |
+| [`docs/architecture-practices.md`](docs/architecture-practices.md) | where a rule lives and when a new pattern is justified |
+| [`docs/dotnet-practices.md`](docs/dotnet-practices.md) | the day-to-day .NET and C# code |
 
-Ao mudar uma regra, atualize `CLAUDE.md` e `AGENTS.md` na mesma alteração. Os projetos gerados nascem com esses arquivos, então a regra viaja junto com o código.
+When you change a rule, update `CLAUDE.md` and `AGENTS.md` in the same change. Generated projects are born with these files, so the rule travels with the code.
 
-## Contribuir
+## Contributing
 
-Issues e pull requests são bem-vindos. Antes de abrir um PR:
+Issues and pull requests are welcome. Before opening a PR:
 
-- Rode `cd api && dotnet test`. Integração e testes funcionais sobem PostgreSQL real por Testcontainers, então o Docker precisa estar disponível.
-- Leia os invariantes de [`CLAUDE.md`](CLAUDE.md). Quebrar um deles é defeito, não preferência de estilo, e `Tests.Architecture` recusa dependência entre módulos e repositório genérico.
-- Respeite o idioma: identificador, rota, JSON, evento e código de erro em inglês; mensagem para pessoa, comentário e documentação em pt-BR.
-- Dependência nova entra em `api/Directory.Packages.props`, com `PackageReference` sem versão, e exige `packages.lock.json` atualizado, porque o CI roda `--locked-mode`.
-- Padrão novo (broker, repositório, outro processo) exige uma ADR em [`docs/architecture.md`](docs/architecture.md) com driver concreto.
-- Se a alteração toca o template, rode `node scripts/test-template.mjs`, que gera e testa os dois modos em uma pasta temporária.
+- Run `cd api && dotnet test`. Integration and functional tests start a real PostgreSQL through Testcontainers, so Docker has to be available.
+- Read the invariants in [`CLAUDE.md`](CLAUDE.md). Breaking one is a defect, not a matter of style, and `Tests.Architecture` refuses dependencies between modules and generic repositories.
+- Keep the language split: identifiers, routes, JSON, events and error codes in English; human-facing messages, comments and documentation in pt-BR, with this README in English.
+- A new dependency goes into `api/Directory.Packages.props`, with a `PackageReference` carrying no version, and requires updated `packages.lock.json` files, because CI runs `--locked-mode`.
+- A new pattern (broker, repository, another process) requires an ADR in [`docs/architecture.md`](docs/architecture.md) with a concrete driver.
+- If the change touches the template, run `node scripts/test-template.mjs`, which generates and tests both modes in a temporary folder.
 
-Relate falha de segurança em contato privado com o mantenedor, não em issue pública.
+Report a security flaw privately to the maintainer, not in a public issue.
 
-## Licença
+## License
 
-MIT. Veja [LICENSE](LICENSE). O template inclui configuração para Keycloak, PostgreSQL, Grafana e outros componentes de terceiros, cada um com a sua própria licença.
+MIT. See [LICENSE](LICENSE). The template ships configuration for Keycloak, PostgreSQL, Grafana and other third-party components, each under its own license.

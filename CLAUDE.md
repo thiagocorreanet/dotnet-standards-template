@@ -58,7 +58,7 @@ Estas regras protegem correção, segurança ou integridade dos dados. Quebrar q
 7. **Regra de negócio não lança exceção.** Casos de uso retornam `Result<T>` com `Error("Module.Reason", ...)`. Exceção é falha inesperada ou contrato interno violado.
 8. **Nada pessoal em telemetria ou auditoria.** Sem senha, token, documento, e-mail, payload de request ou SQL com valores. A auditoria mascara valores por padrão; `AuditValue()` é exceção explícita para dado não sensível.
 9. **Base de migrações nova.** Não apontar o migrador para bancos legados nem remover a proteção contra históricos EF em schemas não registrados.
-10. **Idioma.** Identificadores, arquivos, rotas, JSON, enums, roles, schemas, eventos e códigos de erro em inglês. Mensagens humanas, comentários, XML docs e documentação em pt-BR. Detalhes em [`docs/language-conventions.md`](docs/language-conventions.md).
+10. **Idioma.** Identificadores, arquivos, rotas, JSON, enums, roles, schemas, eventos e códigos de erro em inglês. Mensagens humanas, comentários, XML docs e documentação em pt-BR. O `README.md` é exceção deliberada: é a porta de entrada pública do repositório e fica em inglês. Detalhes em [`docs/language-conventions.md`](docs/language-conventions.md).
 11. **Infraestrutura compartilhada é genérica.** `Shared.*` não contém regra, schema ou nome de módulo de exemplo. O projeto gerado sem exemplo precisa compilar e passar nos testes.
 12. **Configuração local e produtiva são independentes.** Não publicar banco, OTLP ou porta de gerenciamento em produção; não oferecer segredo padrão produtivo.
 
@@ -152,7 +152,7 @@ Integração e testes funcionais sobem PostgreSQL real por Testcontainers; Docke
 - [ ] Erro novo tem código estável `Module.Reason` e o `ErrorType` correspondente ao status HTTP desejado.
 - [ ] Nenhum dado pessoal, token ou payload foi para log, métrica, trace ou auditoria.
 - [ ] Evento novo tem `[EventContract]`, consumidor idempotente e decisão explícita sobre `requiresConsumer`.
-- [ ] Idioma respeitado: identificador em inglês, mensagem e documentação em pt-BR.
+- [ ] Idioma respeitado: identificador em inglês, mensagem e documentação em pt-BR, `README.md` em inglês.
 - [ ] Testes cobrem regra, rejeição de acesso indevido e o risco de concorrência quando existir.
 - [ ] `cd api && dotnet test` passou.
 - [ ] [`docs/implementation-status.md`](docs/implementation-status.md) atualizado quando houver evidência de aceite, sem marcar requisito externo como verificado localmente.

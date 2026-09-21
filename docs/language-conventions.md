@@ -2,7 +2,7 @@
 
 ## Padrão da base
 
-Código e contratos técnicos em inglês; mensagens humanas e documentação em português do Brasil. A convenção também acompanha os projetos gerados pelo template.
+Código e contratos técnicos em inglês; mensagens humanas e documentação em português do Brasil. O `README.md` é a única peça de documentação em inglês, porque é o que um desconhecido lê primeiro. A convenção também acompanha os projetos gerados pelo template.
 
 | Elemento | Padrão | Exemplo |
 |---|---|---|
@@ -16,6 +16,7 @@ Código e contratos técnicos em inglês; mensagens humanas e documentação em 
 | Propriedades estruturadas de log | Inglês | `Module`, `UserId`, `ErrorCode` |
 | Mensagens de erro, validação e texto dos logs da aplicação | pt-BR | `Requisição inválida`, `Usuário não encontrado.` |
 | Comentários, XML docs, Markdown e descrições do OpenAPI/Scalar | pt-BR | Prosa em português com referências técnicas em inglês |
+| `README.md` e a descrição do repositório no GitHub | Inglês | Porta de entrada pública, lida por quem ainda não conhece o projeto |
 
 Módulos do núcleo: `Module.Identity` e `Module.Audit`. Exemplo opcional: `Module.Venues`, `Module.People`, `Module.Events` e `Module.Talks`.
 
