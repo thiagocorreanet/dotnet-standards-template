@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
-      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with: { global-json-file: api/global.json }
       - run: dotnet restore api/ModularApi.slnx --locked-mode
       - run: dotnet test api/ModularApi.slnx --no-restore --nologo -clp:ErrorsOnly --logger trx --collect:"XPlat Code Coverage" --settings api/coverage.runsettings --results-directory artifacts/coverage/current
