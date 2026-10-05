@@ -27,7 +27,7 @@ public sealed class PeopleModule : IModule
     {
         builder.AddModuleDbContext<PeopleDbContext>(PeopleDbContext.SchemaName);
         builder.Services.AddScoped<IPeopleModuleApi, PeopleModuleApi>();
-        builder.Services.AddScoped<IModuleAccessPolicy, PeopleAccessPolicy>();
+        builder.Services.AddScoped<PersonOwnership>();
         builder.Services.AddUseCasesFromAssembly(typeof(PeopleModule).Assembly, PeopleTelemetry.Instance);
         builder.Services.AddModuleValidators(typeof(PeopleModule).Assembly);
     }

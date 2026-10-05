@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Module.Audit.Shared.Handlers;
 using Shared.Contracts.Audit;
@@ -34,7 +33,6 @@ public sealed class AuditModule : IModule
     {
         builder.AddModuleDbContext<AuditDbContext>(AuditDbContext.SchemaName);
         builder.Services.AddIntegrationEventHandler<EntityChanged, EntityChangedHandler>();
-        builder.Services.AddScoped<IModuleAccessPolicy, AuditAccessPolicy>();
         builder.Services.AddUseCasesFromAssembly(typeof(AuditModule).Assembly, AuditTelemetry.Instance);
         builder.Services.AddModuleValidators(typeof(AuditModule).Assembly);
     }

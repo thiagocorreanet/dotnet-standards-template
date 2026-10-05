@@ -65,7 +65,7 @@ Nome em inglês, texto exibido em português. Não misture: `MensagemErro`, `Cre
 - Ações explícitas em métodos: `CreatePerson`, `MarkProcessedAsync`, `CanExecuteAsync`.
 - Investigue `Manager`, `Helper`, `Data` e `Process` quando ocultarem a responsabilidade.
 
-Sufixos obrigatórios por convenção da base, verificados em `Tests.Architecture`: `*UseCase`, `*Endpoint`, `*Validator`, `*DbContext`, `*Module`, `*AccessPolicy`, `*ModuleApi`. `*Repository` é proibido. Os testes cobrem o sufixo do tipo e o namespace `UseCases`, não quantos arquivos você usa: os módulos de exemplo separam um arquivo por responsabilidade e `Module.Identity` concentra as cinco num arquivo só.
+Sufixos obrigatórios por convenção da base, verificados em `Tests.Architecture`: `*UseCase`, `*Endpoint`, `*Validator`, `*DbContext`, `*Module`, `*AccessPolicy`, `*ModuleApi`. `*Repository` é proibido. Os testes cobrem o sufixo do tipo e o namespace `UseCases`, não quantos arquivos você usa: os módulos de exemplo separam um arquivo por responsabilidade e `Module.Identity` concentra as seis num arquivo só. Todo caso de uso precisa de exatamente uma `IAccessPolicy<TRequest>` no namespace do próprio slice.
 
 ### Estilo
 
@@ -92,11 +92,7 @@ Um método deve ter propósito reconhecível e nível de abstração compreensí
 Use guard clauses para reduzir aninhamento. Num caso de uso, o padrão é: verificar, retornar erro cedo, seguir.
 
 ```csharp
-if (emailInUse)
-{
-    logger.LogInformation("Criação de pessoa rejeitada porque o e-mail normalizado já está cadastrado");
-    return PeopleErrors.EmailAlreadyRegistered;
-}
+if (emailInUse) return PeopleErrors.EmailAlreadyRegistered;
 ```
 
 Parâmetros tornam dependências visíveis. Agrupe quando formarem um conceito real (`PagedRequest`); não transforme locais em campos só para encurtar assinatura — num caso de uso isso cria dependência de ordem e atrapalha a reexecução.
@@ -142,7 +138,7 @@ Escolha de tipos:
 <a id="6-dominio"></a>
 ## 6. Domínio: entidades que protegem transições
 
-Entidades principais herdam de `BaseEntity`, que fornece PK Guid v7, campos de auditoria, soft delete e acúmulo de eventos de integração. `Domain/` não conhece EF Core, ASP.NET Core nem o container — e um teste de arquitetura garante que também não conheça `UseCases/` nem `Shared/` do próprio módulo.
+Entidades principais herdam de `BaseEntity`, que fornece PK Guid v7, campos de auditoria, soft delete e acúmulo de eventos de integração. `BaseEntity`, `Result` e `Error` vêm de `Shared.Kernel`. `Domain/` só depende de `System.*`, `Shared.Kernel` e `Shared.Contracts`: não conhece EF Core, ASP.NET Core, o container, `UseCases/` nem `Shared/` do próprio módulo, e os testes de arquitetura garantem isso.
 
 Padrão de entidade:
 
@@ -192,7 +188,7 @@ Registro por varredura de assembly (`AddUseCasesFromAssembly`), sempre `scoped`.
 ```text
 TelemetryUseCaseDecorator
   └─ TransactionalUseCaseDecorator   (apenas com [Command])
-       └─ AuthorizedUseCaseDecorator (IModuleAccessPolicy do módulo)
+       └─ AuthorizedUseCaseDecorator (IAccessPolicy<TRequest> do slice)
             └─ SeuUseCase
 ```
 
@@ -259,7 +255,7 @@ Três mecanismos, com papéis distintos:
 | Situação | Mecanismo | Resposta |
 |---|---|---|
 | Formato, obrigatoriedade, tamanho, faixa | FluentValidation via `WithValidation<TRequest>()` | 400 com `ValidationProblemDetails` |
-| Acesso ao recurso negado | `IModuleAccessPolicy` | 403 `Authorization.ResourceDenied` |
+| Acesso ao recurso negado | `IAccessPolicy<TRequest>` do slice | 403 `Authorization.ResourceDenied` |
 | Desfecho de negócio esperado | `Result` + `Error` | Status conforme `ErrorType` |
 | Ausência normal em busca | `Error.NotFound` ou tipo anulável interno | 404 |
 | Uso inválido de API interna | Guard e exceção de argumento/estado | 500 sanitizado |
@@ -319,24 +315,30 @@ Alteração de nome de campo, tipo, nulabilidade, valor de enum ou semântica é
 
 Autenticar identifica; autorizar decide. Keycloak/OIDC emite o token; a API valida assinatura, issuer, audience, expiração e tipo, e resolve `(issuer, subject)` para o Guid interno. Token autenticado sem vínculo local ativo não entra.
 
-`[Authorize]` e roles no endpoint são barreira de perfil. **Propriedade e contexto do recurso são decididos pela `IModuleAccessPolicy` do módulo**, que roda dentro da fronteira transacional nos comandos:
+`[Authorize]` e roles no endpoint são barreira de perfil. **Propriedade e contexto do recurso são decididos pela `IAccessPolicy<TRequest>` do caso de uso**, que fica no diretório do slice e roda dentro da fronteira transacional nos comandos:
 
 ```csharp
-internal sealed class PeopleAccessPolicy(PeopleDbContext db, ICurrentUser user) : IModuleAccessPolicy
+// UseCases/GetPerson/GetPersonAccessPolicy.cs
+internal sealed class GetPersonAccessPolicy(PersonOwnership ownership, ICurrentUser user) : IAccessPolicy<GetPersonRequest>
 {
-    public Assembly ModuleAssembly => typeof(PeopleModule).Assembly;
-
-    public async Task<bool> CanExecuteAsync(object request, CancellationToken ct)
+    public async Task<bool> CanExecuteAsync(GetPersonRequest request, CancellationToken ct)
     {
         if (!user.IsAuthenticated || user.Id is null) return false;
         if (user.HasRole(DefaultRoles.Administrator)) return true;
-        var id = request switch { GetPersonRequest r => r.PersonId, /* ... */ _ => Guid.Empty };
-        return id != Guid.Empty && await db.People.AnyAsync(p => p.Id == id && p.UserId == user.Id, ct);
+        return await ownership.IsOwnerAsync(request.PersonId, ct);
     }
+}
+
+// Shared/PersonOwnership.cs — regra repetida em Get/Update/DeletePerson vira um serviço pequeno, não uma classe base.
+internal sealed class PersonOwnership(PeopleDbContext db, ICurrentUser user)
+{
+    public async Task<bool> IsOwnerAsync(Guid personId, CancellationToken ct) =>
+        personId != Guid.Empty
+        && await db.People.TagWith("People.Access.Owner").AnyAsync(p => p.Id == personId && p.UserId == user.Id, ct);
 }
 ```
 
-Ao acrescentar um caso de uso, acrescente o caso correspondente na policy. Um `switch` que não reconhece o request retorna `Guid.Empty` e nega — falha fechada, mas o teste de IDOR é obrigatório mesmo assim.
+A policy é registrada por varredura junto com o caso de uso; o `Module` só registra os serviços comuns de acesso, como `PersonOwnership`. Caso de uso sem policy, ou com duas, derruba a composição no startup e reprova `UseCaseConventionTests` — falha fechada. Mesmo assim, o teste de IDOR é obrigatório: a policy existir não prova que ela decide certo.
 
 Demais controles:
 
@@ -376,7 +378,15 @@ Regras da base:
 
 Invariante persistida precisa de constraint no banco. "Consultar se existe e depois inserir" não impede duas requisições concorrentes; a consulta prévia serve para a mensagem de erro amigável, o índice único serve para a correção. A base usa também exclusão temporal do PostgreSQL para sobreposição de agenda no exemplo.
 
-A fronteira transacional de um comando é o advisory lock derivado da chave de `[Command]`. Escolha a chave pelo **conjunto de invariantes** que precisa ser coordenado, não pelo nome do endpoint. Todos os escritores participantes, inclusive rotinas administrativas, precisam declarar a mesma chave. O custo é serialização das escritas daquele conjunto — deliberado, não acidental.
+A fronteira transacional de um comando é o advisory lock derivado da chave de `[Command]`. Escolha a chave pelo **conjunto de invariantes** que precisa ser coordenado, não pelo nome do endpoint:
+
+| Declaração | Chave | Quando usar |
+|---|---|---|
+| `[Command]` | nome do módulo | Padrão. Invariantes do módulo sem análise mais fina. |
+| `[Command("events:{EventId}")]` | resolvida do request | A invariante depende só daquele recurso. A propriedade precisa ser `Guid` ou `string`, ter `NotEmpty` no Validator e estar preenchida antes do lock (corpo ou rota). |
+| `[Command("chave-fixa")]` | literal | Conjunto explícito, inclusive entre módulos (o exemplo usa `event-management-example`). |
+
+Placeholder que não existe no request derruba o startup e reprova `UseCaseConventionTests`. Valores `string` são comparados sem diferenciar maiúsculas; outra normalização é responsabilidade do request. Cada comando tem uma chave só. Todos os escritores participantes, inclusive rotinas administrativas, precisam declarar a mesma chave. O custo é serialização das escritas daquele conjunto — deliberado, não acidental.
 
 Limites padrão: 3 tentativas, `lock_timeout` de 10 s, comando SQL de 30 s (`CommandTransactionOptions`). A expiração não é deadline global de uma sequência arbitrária de consultas.
 
@@ -388,7 +398,7 @@ Reexecução e commit indeterminado:
 
 Conflito de atualização concorrente entre dois clientes exige política explícita: rejeitar, recarregar ou reconciliar, com token de concorrência quando a regra pedir detecção. Comparar com a versão que **o cliente recebeu** é diferente de recarregar a mais recente no início do update.
 
-Migrações: geradas com `dotnet ef` a partir de `api`, com `--output-dir Shared/Migrations` no projeto do módulo e `Host.Api` como startup. Revise o SQL. A aplicação é um job explícito (`Host.Api migrate`) sob advisory lock, com credencial DDL própria; o startup normal recusa migrações pendentes. O migrador recusa históricos EF em schemas não registrados — essa proteção não é conversão de dados.
+Migrações: geradas com `dotnet ef` a partir de `api`, com `--output-dir Migrations` no projeto do módulo e `Host.Api` como startup. Revise o SQL. A aplicação é um job explícito (`Host.Api migrate`) sob advisory lock, com credencial DDL própria; o startup normal recusa migrações pendentes. O migrador recusa históricos EF em schemas não registrados — essa proteção não é conversão de dados.
 
 <a id="15-integracoes"></a>
 ## 15. Eventos e integrações externas
@@ -404,7 +414,10 @@ public sealed record PersonCreated(Guid PersonId) : IntegrationEvent;
 
 - O nome `context.fact.v1` é estável e independe do nome CLR. Remover a v1 antes de drenar mensagens antigas é mudança incompatível.
 - `requiresConsumer: true` significa que a ausência de consumidor é falha; use quando o efeito for obrigatório.
-- **Todo consumidor precisa ser idempotente** por evento e por consumidor. A auditoria usa chave do evento com `INSERT ON CONFLICT`.
+- **Registre o handler com `AddIntegrationEventHandler`.** Ele roda em escopo próprio e passa pela Inbox: `(EventId, Consumer)` é gravado na mesma transação do efeito, e a repetição da mensagem não reaplica o handler. Grave pelo `DbContext` do módulo e chame `SaveChangesAsync`; não abra outra transação nem chame `ExecuteUpdate`/`ExecuteDelete` fora do contexto.
+- A Inbox não cobre efeito fora desse `DbContext` (outro módulo, serviço externo): ali a idempotência continua sendo do destino.
+- `[SkipInbox("justificativa")]` só quando o efeito já é idempotente no destino. A auditoria usa a chave do evento com `INSERT ON CONFLICT` e por isso abre mão da Inbox.
+- Fixe `[InboxConsumer("nome-estável")]` antes de renomear a classe ou o namespace do handler; sem isso, o nome muda e eventos repetidos são reaplicados.
 - Cada mensagem recebe um escopo DI isolado; handlers da mesma mensagem compartilham esse escopo e devem ser independentes. Falha de um handler repete a mensagem inteira.
 - Dead letter é terminal explícito; replay é administrativo, exige `reasonCode` e registra o ator.
 
@@ -423,10 +436,20 @@ Não há cliente HTTP externo nesta base, e isso é deliberado. Ao introduzir um
 
 Agrupe configuração relacionada em options tipadas e valide na inicialização com `ValidateOnStart` quando a aplicação não puder funcionar com valor inválido. Em variável de ambiente, `Outbox__BatchSize` representa `Outbox:BatchSize`. Não espalhe leitura de configuração dentro de regra.
 
+**Caso de uso, em regra, não loga.** O `TelemetryUseCaseDecorator` já registra, para todo caso de uso, a entrada (com o contexto permitido do request), o sucesso com duração, a rejeição com `ErrorCode`/`ErrorType`, o cancelamento e a exceção. Repetir isso no caso de uso só gera ruído e custo de armazenamento.
+
+| Situação | Logar no caso de uso? |
+|---|---|
+| Passo do fluxo ("carregado", "chamando agregado", "persistido", contagens) | Não. O trace e o log do decorator cobrem. |
+| Falha de negócio (`return XErrors.Y`) | Não. O decorator registra o código do erro. |
+| Situação anômala que não vira erro: referência de outro módulo ausente, concorrência detectada e resolvida pelo índice único, recuperação | Sim, `LogWarning`. |
+| Decisão de negócio relevante que não aparece no resultado nem na auditoria | Sim, com justificativa na revisão. Raro. |
+
 Logs são estruturados, com template estável, **propriedades em inglês e texto em pt-BR**:
 
 ```csharp
-logger.LogInformation("Pessoa {PersonId} criada", person.Id);
+logger.LogWarning("Concorrência detectada ao inscrever pessoa {PersonId} no evento {EventId}; índice único preservou a regra",
+    request.PersonId, request.EventId);
 logger.LogWarning("Reexecutando operação {OperationId}, tentativa {Attempt}, causa {ErrorType}",
     operationId, attempt, exception.GetType().Name);
 ```
@@ -503,7 +526,7 @@ Marque como não aplicável o que estiver fora do escopo.
 - [ ] Cada abstração nova resolve um problema concreto e não reintroduz padrão recusado pela base.
 - [ ] Escrita de negócio está marcada com `[Command]` e com a chave de consistência correta.
 - [ ] O caso de uso não tem efeito externo, estado retido nem exceção para regra de negócio.
-- [ ] A access policy cobre o novo request; há teste de acesso indevido.
+- [ ] O caso de uso tem sua `<Name>AccessPolicy` no slice; há teste de acesso indevido.
 - [ ] Invariante persistida tem constraint ou índice único.
 - [ ] Consultas projetam o necessário, têm ordenação estável, `TagWith` constante e tracking adequado.
 - [ ] Nenhum `ExecuteUpdate`/`ExecuteDelete` em domínio sem compensar auditoria e eventos.

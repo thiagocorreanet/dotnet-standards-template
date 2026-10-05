@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,14 +11,18 @@ public static class OidcAuthenticationExtensions
 {
     public static void AddOidcAuthentication(this IHostApplicationBuilder builder)
     {
-        var settings = builder.Configuration.GetSection(OidcOptions.Section).Get<OidcOptions>() ?? new();
+        var section = builder.Configuration.GetSection(OidcOptions.Section);
+        var settings = (section.Get<OidcOptions>() ?? new()).Normalize();
         if (!Uri.TryCreate(settings.Authority, UriKind.Absolute, out var uri) ||
             (uri.Scheme != "https" && !(builder.Environment.IsDevelopment() && uri.Scheme == "http")) ||
             settings.Authority.EndsWith('/') || string.IsNullOrWhiteSpace(settings.Audience) ||
             settings.MaxAccessTokenLifetimeSeconds is < 60 or > 600 ||
+            (settings.RequireTokenType && string.IsNullOrWhiteSpace(settings.TokenType)) ||
             (!builder.Environment.IsDevelopment() && !settings.RequireHttpsMetadata))
-            throw new InvalidOperationException("Configure Oidc:Authority HTTPS (sem barra final), Audience e validade máxima entre 60 e 600 segundos.");
-        builder.Services.Configure<OidcOptions>(builder.Configuration.GetSection(OidcOptions.Section));
+            throw new InvalidOperationException("Configure Oidc:Authority HTTPS (sem barra final), Audience, TokenType e validade máxima entre 60 e 600 segundos.");
+        var roleMapper = new RoleClaimMapper(settings);
+        builder.Services.Configure<OidcOptions>(section);
+        builder.Services.PostConfigure<OidcOptions>(options => options.Normalize());
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
         {
             o.Authority = settings.Authority;
@@ -44,7 +47,7 @@ public static class OidcAuthenticationExtensions
                     var principal = ctx.Principal!;
                     var subject = principal.FindFirstValue("sub");
                     if (string.IsNullOrWhiteSpace(subject) || subject.Length > 255 ||
-                        principal.FindFirstValue("typ") != "Bearer" ||
+                        (settings.RequireTokenType && principal.FindFirstValue("typ") != settings.TokenType) ||
                         !long.TryParse(principal.FindFirstValue("iat"), out var issued) ||
                         !long.TryParse(principal.FindFirstValue("exp"), out var expires) ||
                         issued < 0 || expires <= issued || expires - issued > settings.MaxAccessTokenLifetimeSeconds ||
@@ -64,20 +67,9 @@ public static class OidcAuthenticationExtensions
                             identity.RemoveClaim(claim);
                     var target = (ClaimsIdentity)principal.Identity!;
                     target.AddClaim(new(OidcOptions.UserIdClaim, account.Id.ToString()));
-                    var resource = principal.FindFirstValue("resource_access");
-                    if (resource is null) return;
-                    try
-                    {
-                        using var json = JsonDocument.Parse(resource);
-                        if (json.RootElement.ValueKind != JsonValueKind.Object) { ctx.Fail("Claims inválidas."); return; }
-                        if (json.RootElement.TryGetProperty(settings.Audience, out var client) && client.ValueKind == JsonValueKind.Object &&
-                            client.TryGetProperty("roles", out var roles) && roles.ValueKind == JsonValueKind.Array)
-                            foreach (var role in roles.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String)
-                                .Select(x => x.GetString()!).Distinct(StringComparer.Ordinal))
-                                if (settings.AllowedRoles.Contains(role, StringComparer.Ordinal))
-                                    target.AddClaim(new(OidcOptions.RoleClaim, role));
-                    }
-                    catch (JsonException) { ctx.Fail("Claims inválidas."); }
+                    if (!roleMapper.TryMap(principal, out var roles)) { ctx.Fail("Claims inválidas."); return; }
+                    foreach (var role in roles)
+                        target.AddClaim(new(OidcOptions.RoleClaim, role));
                 }
             };
         });

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Shared.Http.Endpoints;
 using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Module.Identity.Shared;
 using Shared.Contracts.Common;
 namespace Module.Identity.UseCases.GetCurrentUser;
@@ -19,6 +20,12 @@ internal sealed class GetCurrentUserUseCase(IdentityDbContext db, ICurrentUser a
         return user is null ? Error.NotFound("Identity.NotFound", "Usuário não encontrado.")
             : new GetCurrentUserResponse(user.Id, user.UserName, user.Email, actor.Roles);
     }
+}
+/// <summary>Cada usuário consulta apenas o próprio perfil.</summary>
+internal sealed class GetCurrentUserAccessPolicy(ICurrentUser user) : IAccessPolicy<GetCurrentUserRequest>
+{
+    public Task<bool> CanExecuteAsync(GetCurrentUserRequest request, CancellationToken ct) =>
+        Task.FromResult(user.IsAuthenticated && request.UserId == user.Id);
 }
 internal sealed class GetCurrentUserEndpoint : IEndpoint
 {

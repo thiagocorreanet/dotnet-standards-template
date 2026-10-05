@@ -47,7 +47,7 @@ namespace Module.Identity.Migrations
                         .IsRequired()
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)")
-                        .HasAnnotation("ModularApi:Sensitive", true);
+                        .HasAnnotation("Shared:Sensitive", true);
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -78,7 +78,7 @@ namespace Module.Identity.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
-                        .HasAnnotation("ModularApi:Sensitive", true);
+                        .HasAnnotation("Shared:Sensitive", true);
 
                     b.HasKey("Id");
 
@@ -88,6 +88,25 @@ namespace Module.Identity.Migrations
                         .IsUnique();
 
                     b.ToTable("Users", "Identity");
+                });
+
+            modelBuilder.Entity("Shared.Data.Inbox.InboxMessage", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Consumer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("EventId", "Consumer");
+
+                    b.HasIndex("ProcessedAt");
+
+                    b.ToTable("InboxMessages", "Identity");
                 });
 
             modelBuilder.Entity("Shared.Data.Outbox.OutboxMessage", b =>

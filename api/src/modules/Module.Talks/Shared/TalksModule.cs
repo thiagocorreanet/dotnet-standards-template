@@ -28,7 +28,7 @@ public sealed class TalksModule : IModule
         builder.AddModuleDbContext<TalksDbContext>(TalksDbContext.SchemaName);
         builder.Services.AddScoped<ITalksModuleApi, TalksModuleApi>();
         builder.Services.AddScoped<TalkScheduleChecker>();
-        builder.Services.AddScoped<IModuleAccessPolicy, TalksAccessPolicy>();
+        builder.Services.AddScoped<TalkOrganizerAccess>();
         builder.Services.AddUseCasesFromAssembly(typeof(TalksModule).Assembly, TalksTelemetry.Instance);
         builder.Services.AddModuleValidators(typeof(TalksModule).Assembly);
     }

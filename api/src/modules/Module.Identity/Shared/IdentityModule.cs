@@ -17,7 +17,6 @@ public sealed class IdentityModule : IModule
         builder.AddModuleDbContext<IdentityDbContext>(IdentityDbContext.SchemaName);
         builder.Services.AddScoped<IIdentityResolver, IdentityResolver>();
         builder.Services.AddScoped<IIdentityBootstrapper, IdentityBootstrapper>();
-        builder.Services.AddScoped<IModuleAccessPolicy, IdentityAccessPolicy>();
         builder.Services.AddUseCasesFromAssembly(typeof(IdentityModule).Assembly, IdentityTelemetry.Instance);
         builder.Services.AddModuleValidators(typeof(IdentityModule).Assembly);
     }

@@ -17,7 +17,7 @@ services:
       OpenApi__Enabled: "false"
     secrets:
       - source: migrator-db
-        target: ConnectionStrings__ModularApi
+        target: ConnectionStrings__Database
     networks: [application]
     read_only: true
     tmpfs: [/tmp]
@@ -33,7 +33,7 @@ services:
       Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:?Origem HTTPS exata do cliente}
     secrets:
       - source: runtime-db
-        target: ConnectionStrings__ModularApi
+        target: ConnectionStrings__Database
     depends_on:
       migrate: { condition: service_completed_successfully }
     networks: [application]

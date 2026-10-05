@@ -276,13 +276,13 @@
           "Serilog": "4.2.0"
         }
       },
-      "shared.contracts": {
+      "ModularApi.Shared.Contracts": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.12, )"
         }
       },
-      "shared.data": {
+      "ModularApi.Shared.Data": {
         "type": "Project",
         "dependencies": {
           "Microsoft.EntityFrameworkCore": "[10.0.12, )",
@@ -290,11 +290,18 @@
           "Microsoft.Extensions.Configuration.Binder": "[10.0.12, )",
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.12, )",
           "Microsoft.Extensions.Options.ConfigurationExtensions": "[10.0.12, )",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
-          "Shared.Contracts": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
         }
       },
-      "shared.observability": {
+      "ModularApi.Shared.Kernel": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )"
+        }
+      },
+      "ModularApi.Shared.Observability": {
         "type": "Project",
         "dependencies": {
           "Npgsql.OpenTelemetry": "[10.0.3, )",

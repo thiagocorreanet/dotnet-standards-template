@@ -12,11 +12,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
 
-    <ProjectReference Include="../../shared/Shared.Contracts/Shared.Contracts.csproj" />
-    <ProjectReference Include="../../shared/Shared.Data/Shared.Data.csproj" />
-    <ProjectReference Include="../../shared/Shared.Http/Shared.Http.csproj" />
-    <ProjectReference Include="../../shared/Shared.Observability/Shared.Observability.csproj" />
-    <ProjectReference Include="../../shared/Shared.Messaging/Shared.Messaging.csproj" />
-    <ProjectReference Include="../../shared/Shared.WebHost/Shared.WebHost.csproj" />
+    <SharedReference Include="Contracts" />
+    <SharedReference Include="Data" />
+    <SharedReference Include="Kernel" />
+    <SharedReference Include="Http" />
+    <SharedReference Include="Observability" />
+    <SharedReference Include="Messaging" />
+    <SharedReference Include="WebHost" />
+    <ProjectReference Include="../../shared/Shared.Contracts.Modules/Shared.Contracts.Modules.csproj" />
   </ItemGroup>
 </Project>

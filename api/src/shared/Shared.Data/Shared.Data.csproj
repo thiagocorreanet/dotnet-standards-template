@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Shared.Data</RootNamespace>
+    <Description>ModuleDbContext, convenções, auditoria por interceptor, Outbox, Inbox, recibos de comando e migrador por schema.</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
@@ -10,5 +11,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <ProjectReference Include="../Shared.Contracts/Shared.Contracts.csproj" />
+    <ProjectReference Include="../Shared.Kernel/Shared.Kernel.csproj" />
   </ItemGroup>
 </Project>

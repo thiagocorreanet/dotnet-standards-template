@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Contratos entre os módulos deste projeto (I<Nome>ModuleApi e eventos de integração de cada módulo).
+    Fica no projeto, não vai para pacote: os contratos genéricos (Common, Identity, Integration, Audit) estão em Shared.Contracts.
+    Namespaces seguem Shared.Contracts.<Módulo>.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Shared.Contracts</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <SharedReference Include="Contracts" />
+  </ItemGroup>
+</Project>

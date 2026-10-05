@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
 using Shared.Data.Outbox;
 
 namespace Shared.Data;
@@ -48,8 +48,8 @@ public abstract class ModuleDbContext(DbContextOptions options) : DbContext(opti
 public static class EntityTypeBuilderExtensions
 {
     /// <summary>Anotação de propriedade cujo valor nunca deve aparecer na trilha de auditoria (ex.: hash de senha).</summary>
-    public const string SensitiveAnnotation = "ModularApi:Sensitive";
-    public const string AuditValueAnnotation = "ModularApi:AuditValue";
+    public const string SensitiveAnnotation = "Shared:Sensitive";
+    public const string AuditValueAnnotation = "Shared:AuditValue";
 
     /// <summary>Opt-in de valores não pessoais. Por padrão a auditoria registra o campo sem copiar seu conteúdo.</summary>
     public static PropertyBuilder<TProperty> AuditValue<TProperty>(this PropertyBuilder<TProperty> builder) =>

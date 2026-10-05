@@ -1,5 +1,5 @@
 using Shared.Contracts.People;
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
 
 namespace Module.People.Domain;
 

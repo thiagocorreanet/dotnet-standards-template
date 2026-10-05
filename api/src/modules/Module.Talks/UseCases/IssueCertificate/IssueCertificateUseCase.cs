@@ -7,7 +7,7 @@ using Shared.Contracts.Talks;
 using Shared.Contracts.People;
 using Shared.Data.Extensions;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Talks.UseCases.IssueCertificate;
 
@@ -24,21 +24,16 @@ internal sealed class IssueCertificateUseCase(TalksDbContext db, IPeopleModuleAp
             .FirstOrDefaultAsync(p => p.Id == request.TalkId, cancellationToken);
         if (talk is null)
         {
-            logger.LogInformation("Emissão de certificado rejeitada: palestra {TalkId} não encontrada", request.TalkId);
             return TalksErrors.TalkNotFound;
         }
 
-        logger.LogDebug("Chamando agregado Palestra {TalkId}.EmitirCertificado para pessoa {PersonId}; presenças carregadas={AttendanceCount}, certificados existentes={CertificateCount}",
-            talk.Id, request.PersonId, talk.Attendances.Count, talk.Certificates.Count);
         var result = talk.IssueCertificate(request.PersonId, timeProvider.GetUtcNow());
         if (result.IsFailure)
         {
-            logger.LogInformation("Certificado da pessoa {PersonId} para palestra {TalkId} rejeitado pela regra {ErrorCode}", request.PersonId, talk.Id, result.Error.Code);
             return result.Error;
         }
 
         var (certificate, created) = result.Value;
-        logger.LogInformation("Certificado {CertificateId} da pessoa {PersonId} na palestra {TalkId}: novo={CertificateCreated}", certificate.Id, certificate.PersonId, talk.Id, created);
         if (created)
         {
             var owner = await peopleApi.GetPersonSummaryAsync(request.PersonId, cancellationToken);
@@ -55,11 +50,6 @@ internal sealed class IssueCertificateUseCase(TalksDbContext db, IPeopleModuleAp
                 logger.LogWarning("Persistência do certificado {CertificateId} falhou pela regra {ErrorCode}", certificate.Id, write.Error.Code);
                 return write.Error;
             }
-            logger.LogInformation("Novo certificado {CertificateId} persistido", certificate.Id);
-        }
-        else
-        {
-            logger.LogDebug("Certificado {CertificateId} já existia; persistência não foi necessária", certificate.Id);
         }
 
         return new IssueCertificateResponse(

@@ -19,6 +19,7 @@ There is a sibling template for the frontend, built on the same idea of rules wr
 | Serilog and OpenTelemetry through one route, with log and trace sanitization | `Shared.Observability` |
 | Tests that refuse dependencies between modules and types named `Repository` | `api/tests/Tests.Architecture` |
 | Project generation with and without the example domain | `.template.config` and `scripts/test-template.mjs` |
+| Module and use case generators (`modular-module`, `modular-usecase`) | `templates/` and `docs/extending.md` |
 
 ## Overview
 
@@ -41,7 +42,7 @@ flowchart LR
     Collector --> Backend["Local: Prometheus, Tempo, Loki and Grafana<br/>Production: OTLP backend chosen by operations"]
 ```
 
-Each module exposes an `IModule` class with its endpoints, exactly one `DbContext` and one `IModuleAccessPolicy`. Discovery is assembly scanning in `Shared.WebHost`, so removing the example modules takes no change to the core. The API stores no user password and no signing key: it validates the RSA signature, the issuer, the audience and the token lifetime, and refuses a valid token that has no active local binding.
+Each module exposes an `IModule` class with its endpoints, exactly one `DbContext`, and every use case carries its own `IAccessPolicy<TRequest>` in its slice; a use case without one stops the host at startup. Discovery is assembly scanning in `Shared.WebHost`, so removing the example modules takes no change to the core. The API stores no user password and no signing key: it validates the RSA signature, the issuer, the audience and the token lifetime, and refuses a valid token that has no active local binding.
 
 ## Module boundary
 
@@ -80,7 +81,7 @@ sequenceDiagram
     T->>X: command with a consistency key
     X->>PG: BEGIN and advisory lock on the key
     X->>A: already under transaction and lock
-    A->>A: module policy decides on the resource and its owner
+    A->>A: use case policy decides on the resource and its owner
     A->>U: authorized
     U->>PG: state, events in the Outbox and CommandReceipt
     X->>PG: COMMIT
@@ -88,11 +89,11 @@ sequenceDiagram
     X-->>C: 201, or 503 when the commit cannot be verified
 ```
 
-The order matters: the lock is taken before any read, invariant check or authorization decision. Every business write is a use case marked with `[Command("key")]`, and writers that share an invariant declare the same key, which serializes those writes. That is a deliberate cost, not a design for high throughput.
+The order matters: the lock is taken before any read, invariant check or authorization decision. Every business write is a use case marked with `[Command]`. Without arguments the key is the module name; `[Command("events:{EventId}")]` locks a single resource, with placeholders read from the request; a fixed key coordinates writers across modules. Writers that share an invariant declare the same key, which serializes those writes. That is a deliberate cost, not a design for high throughput.
 
 A transient failure drops the scope and repeats everything from authorization on, with a fresh `DbContext` (3 attempts by default). A use case therefore cannot hold state between attempts or cause an external effect; the intent goes to the Outbox instead. If the commit confirmation fails, a new connection looks for the `CommandReceipt` written in the same transaction. Without that proof the answer is 503, an indeterminate result: the base declares neither rollback nor success.
 
-Queries without `[Command]` skip the transactional decoration and run in the request scope, but they still go through the module policy.
+Queries without `[Command]` skip the transactional decoration and run in the request scope, but they still go through their access policy.
 
 ## Events and Outbox
 
@@ -109,7 +110,7 @@ flowchart TB
     Probe["OutboxProbe"] -. "pending, dead letters and<br/>age of the oldest one" .-> P
 ```
 
-Delivery is at least once and preserves no order across replicas, so every consumer has to be idempotent per event and per consumer. Auditing does that with the event key and `INSERT ON CONFLICT`. Each module has its own delivery sequence; `Outbox:MaxConcurrentDeliveries` caps the active deliveries per process. Dead letter is terminal: replay takes an administrator, records the actor and a `reasonCode`, and never happens on its own.
+Delivery is at least once and preserves no order across replicas. Handlers registered with `AddIntegrationEventHandler` run in their own scope behind an Inbox: `(EventId, Consumer)` is written in the same transaction as the handler effect, so a redelivered message does not apply a finished handler again. Auditing opts out explicitly with `[SkipInbox]`, because the event key with `INSERT ON CONFLICT` already makes its effect idempotent. Each module has its own delivery sequence; `Outbox:MaxConcurrentDeliveries` caps the active deliveries per process. Dead letter is terminal: replay takes an administrator, records the actor and a `reasonCode`, and never happens on its own.
 
 ## Create a new project
 
@@ -139,11 +140,13 @@ Do not reuse `bin/`, `obj/`, `.env`, volumes or databases across projects. After
 
 ```bash
 node scripts/init-local.mjs
-docker compose -f compose.local.yaml --profile observability up --build -d
+docker compose -f compose.local.yaml -f compose.observability.yaml up --build -d
 node scripts/bootstrap-local.mjs
 node scripts/smoke-oidc.mjs
 node scripts/smoke-observability.mjs
 ```
+
+That is the **full** mode. For day-to-day work on use cases, the **lite** mode runs only PostgreSQL, Keycloak and the API: `docker compose -f compose.local.yaml up --build -d`, then `node scripts/wait-local.mjs --lite`. With no collector, the OTLP endpoint is empty, so the API exports nothing and logs to the console. Both modes share the same `.env` and volumes.
 
 Wait for the realm import before the bootstrap. If Keycloak is not ready yet, repeat **only the bootstrap**, not the credential generation. It accepts an empty identity base only, and never re-elevates users on restart.
 
@@ -151,8 +154,8 @@ Wait for the realm import before the bootstrap. If Keycloak is not ready yet, re
 |---|---|
 | API / development Scalar | http://localhost:5761/scalar |
 | Keycloak | http://identity.localhost:8080 |
-| Grafana, user `operator` | http://localhost:3000 |
-| Prometheus | http://localhost:9090 |
+| Grafana, user `operator` (full mode) | http://localhost:3000 |
+| Prometheus (full mode) | http://localhost:9090 |
 | PostgreSQL | `127.0.0.1:55432` |
 
 Scalar is the default interface in generated projects too. The root `/` redirects to `/scalar`; the contracts stay at `/openapi/v1.json` and `/openapi/v1.yaml`. UI and contracts are published only in `Development` with `OpenApi:Enabled=true`. Swagger UI was removed.
@@ -165,12 +168,12 @@ Passwords are random and live in `.env` (0600). The API demo account is `develop
 
 The realm import is initial: editing realm.json does not update an existing realm. Make changes through Keycloak's administrative process, and do not delete volumes to apply one.
 
-If `.env` and the initial binding already exist **in this English version**, resume with `docker compose -f compose.local.yaml --profile observability up --build -d` alone. Do not run init-local or bootstrap again. An environment created before the move to English is not automatically compatible: keep it and use a new project and database, or an explicit migration plan.
+If `.env` and the initial binding already exist **in this English version**, resume with `docker compose -f compose.local.yaml -f compose.observability.yaml up --build -d` (or the lite command) alone. Do not run init-local or bootstrap again. An environment created before the move to English is not automatically compatible: keep it and use a new project and database, or an explicit migration plan.
 
 To stop while preserving data:
 
 ```bash
-docker compose -f compose.local.yaml --profile observability down
+docker compose -f compose.local.yaml -f compose.observability.yaml down
 ```
 
 Do not use `down -v` if you want to keep databases, history and telemetry.
@@ -184,7 +187,8 @@ api/
   src/modules/Module.Audit     append-only administrative query
   src/modules/Module.*         optional business modules
   src/shared/Shared.Contracts  contracts, identity and events
-  src/shared/Shared.Http       use cases, validation and transaction
+  src/shared/Shared.Kernel     Result/Error and entity base types, no ASP.NET or EF
+  src/shared/Shared.Http       use cases, access policies, validation and transaction
   src/shared/Shared.Data       EF, auditing, Outbox and migrations
   src/shared/Shared.Messaging  in-process delivery and processing
   src/shared/Shared.Observability logs, metrics and traces
@@ -222,12 +226,17 @@ The documents below are written in pt-BR, as are the human-facing messages in th
 - [Creating a module and adapting the template](docs/extending.md)
 - [Identity, authorization and privacy](docs/security.md)
 - [Running, incidents, backup and production](docs/runbooks.md)
-- [Coverage of the original document](docs/implementation-status.md), available in the source repository
-- [Technical review of the delivery](docs/technical-review.md), available in the source repository
-- [Corrections from the quality re-assessment](docs/corrections-review.md)
 - [Test, coverage and release gates](docs/quality-gates.md)
+<!--#if (sourceRepository) -->
 
-This is an implemented and tested base, not a claim of universal production readiness. Frontend, multi-tenancy, migrating users from an older system, approved SLO/RPO/RTO, legal retention, IdP high availability and alert routing depend on the product and the environment. Those dependencies are identified in the matrix; they are not treated as gaps closed by a local test.
+Source repository only; the template does not export these:
+
+- [Coverage of the original document](docs/implementation-status.md)
+- [Technical review of the delivery](docs/technical-review.md)
+- [Corrections from the quality re-assessment](docs/corrections-review.md)
+<!--#endif -->
+
+This is an implemented and tested base, not a claim of universal production readiness. Frontend, multi-tenancy, migrating users from an older system, approved SLO/RPO/RTO, legal retention, IdP high availability and alert routing depend on the product and the environment. Those dependencies are not treated as gaps closed by a local test.
 
 **New database:** the migrations in this base are not a supported upgrade from the old ASP.NET Identity authentication **or from the version of this template with Portuguese names**. Do not point the migrator at those databases. The migrator refuses histories in unregistered schemas before applying any migration; that is a protection, not a data conversion.
 
@@ -251,6 +260,7 @@ Issues and pull requests are welcome. Before opening a PR:
 - Run `cd api && dotnet test`. Integration and functional tests start a real PostgreSQL through Testcontainers, so Docker has to be available.
 - Read the invariants in [`CLAUDE.md`](CLAUDE.md). Breaking one is a defect, not a matter of style, and `Tests.Architecture` refuses dependencies between modules and generic repositories.
 - Keep the language split: identifiers, routes, JSON, events and error codes in English; human-facing messages, comments and documentation in pt-BR, with this README in English.
+- Generated projects consume the generic `Shared.*` libraries as NuGet packages from the base feed (`api/nuget.config`, version in `SharedPackagesVersion`), not as copied code. Fix them in the base repository and release a new version; see `docs/upgrading.md`.
 - A new dependency goes into `api/Directory.Packages.props`, with a `PackageReference` carrying no version, and requires updated `packages.lock.json` files, because CI runs `--locked-mode`.
 - A new pattern (broker, repository, another process) requires an ADR in [`docs/architecture.md`](docs/architecture.md) with a concrete driver.
 - If the change touches the template, run `node scripts/test-template.mjs`, which generates and tests both modes in a temporary folder.

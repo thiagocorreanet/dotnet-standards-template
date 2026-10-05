@@ -356,36 +356,49 @@
           "Microsoft.IdentityModel.Tokens": "8.19.2"
         }
       },
-      "shared.contracts": {
+      "ModularApi.Shared.Contracts": {
         "type": "Project"
       },
-      "shared.data": {
+      "ModularApi.Shared.Contracts.Modules": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )"
+        }
+      },
+      "ModularApi.Shared.Data": {
         "type": "Project",
         "dependencies": {
           "Microsoft.EntityFrameworkCore": "[10.0.12, )",
           "Microsoft.EntityFrameworkCore.Relational": "[10.0.12, )",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
-          "Shared.Contracts": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
         }
       },
-      "shared.http": {
+      "ModularApi.Shared.Http": {
         "type": "Project",
         "dependencies": {
           "FluentValidation": "[12.1.1, )",
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )"
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )"
         }
       },
-      "shared.messaging": {
+      "ModularApi.Shared.Kernel": {
         "type": "Project",
         "dependencies": {
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )"
         }
       },
-      "shared.observability": {
+      "ModularApi.Shared.Messaging": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )"
+        }
+      },
+      "ModularApi.Shared.Observability": {
         "type": "Project",
         "dependencies": {
           "Npgsql.OpenTelemetry": "[10.0.3, )",
@@ -400,18 +413,18 @@
           "Serilog.Sinks.OpenTelemetry": "[4.2.0, )"
         }
       },
-      "shared.webhost": {
+      "ModularApi.Shared.WebHost": {
         "type": "Project",
         "dependencies": {
           "AspNetCore.HealthChecks.NpgSql": "[9.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.12, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.12, )",
-          "Scalar.AspNetCore": "[2.17.6, )",
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Http": "[1.0.0, )",
-          "Shared.Messaging": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Http": "[1.0.0, )",
+          "ModularApi.Shared.Messaging": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )",
+          "Scalar.AspNetCore": "[2.17.6, )"
         }
       },
       "AspNetCore.HealthChecks.NpgSql": {

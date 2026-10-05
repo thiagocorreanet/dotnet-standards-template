@@ -9,7 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <ProjectReference Include="../../src/shared/Shared.Http/Shared.Http.csproj" />
-    <ProjectReference Include="../../src/shared/Shared.WebHost/Shared.WebHost.csproj" />
+    <SharedReference Include="Http" />
+    <SharedReference Include="WebHost" />
   </ItemGroup>
 </Project>

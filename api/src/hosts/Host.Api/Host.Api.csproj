@@ -10,7 +10,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <ProjectReference Include="../../shared/Shared.WebHost/Shared.WebHost.csproj" />
+    <SharedReference Include="WebHost" />
     <ProjectReference Include="../../modules/Module.Venues/Module.Venues.csproj" Condition="'$(IncludeExample)' == 'true'" />
     <ProjectReference Include="../../modules/Module.People/Module.People.csproj" Condition="'$(IncludeExample)' == 'true'" />
     <ProjectReference Include="../../modules/Module.Events/Module.Events.csproj" Condition="'$(IncludeExample)' == 'true'" />

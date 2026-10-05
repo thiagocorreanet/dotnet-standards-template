@@ -53,6 +53,7 @@ internal sealed class OutboxProcessor(
                 if (DateTimeOffset.UtcNow >= nextCleanup)
                 {
                     await store.PruneProcessedAsync(cfg.ProcessedRetentionDays, stoppingToken);
+                    await store.PruneInboxAsync(cfg.InboxRetentionDays, stoppingToken);
                     nextCleanup = DateTimeOffset.UtcNow.AddHours(1);
                 }
             }

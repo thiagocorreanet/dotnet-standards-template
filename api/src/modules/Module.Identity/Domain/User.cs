@@ -1,4 +1,4 @@
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
 using Shared.Contracts.Identity;
 
 namespace Module.Identity.Domain;

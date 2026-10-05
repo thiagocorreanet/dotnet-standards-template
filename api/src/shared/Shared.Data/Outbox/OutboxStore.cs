@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Data.Inbox;
 using Shared.Data.Transactions;
 namespace Shared.Data.Outbox;
 internal sealed class OutboxStore<TContext>(IServiceScopeFactory scopeFactory) : IOutboxStore
@@ -115,5 +116,17 @@ internal sealed class OutboxStore<TContext>(IServiceScopeFactory scopeFactory) :
             .OrderBy(m => m.CommittedAt).Take(1000).Select(m => m.Id).ToListAsync(ct);
         await db.Set<CommandReceipt>().Where(m => receipts.Contains(m.Id)).ExecuteDeleteAsync(ct);
         return deleted;
+    }
+    public async Task<int> PruneInboxAsync(int retentionDays, CancellationToken ct)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(retentionDays, 7);
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<TContext>();
+        var before = (await Now(db, ct)).AddDays(-retentionDays);
+        var oldest = await db.Set<InboxMessage>().Where(m => m.ProcessedAt < before).OrderBy(m => m.ProcessedAt)
+            .Take(1000).Select(m => m.ProcessedAt).ToListAsync(ct);
+        if (oldest.Count == 0) return 0;
+        var limit = oldest[^1];
+        return await db.Set<InboxMessage>().Where(m => m.ProcessedAt <= limit && m.ProcessedAt < before).ExecuteDeleteAsync(ct);
     }
 }

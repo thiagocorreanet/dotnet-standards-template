@@ -165,6 +165,25 @@ namespace Module.Venues.Migrations
                     b.ToTable("Rooms", "Venues");
                 });
 
+            modelBuilder.Entity("Shared.Data.Inbox.InboxMessage", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Consumer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("EventId", "Consumer");
+
+                    b.HasIndex("ProcessedAt");
+
+                    b.ToTable("InboxMessages", "Venues");
+                });
+
             modelBuilder.Entity("Shared.Data.Outbox.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")

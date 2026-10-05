@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Shared.Contracts.Identity;
 using Shared.Http.Endpoints;
 using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Module.Identity.Shared;
 using Shared.Contracts.Common;
 using Shared.Data.Extensions;
@@ -19,6 +20,12 @@ internal sealed class ListUsersUseCase(IdentityDbContext db)
         await db.Users.AsNoTracking().OrderBy(x => x.Id)
           .Select(x => new ListUsersItemResponse(x.Id, x.Subject, x.UserName, x.Email, x.IsActive))
           .ToPagedResultAsync(new PagedRequest(request.Page, request.PageSize), ct);
+}
+/// <summary>Somente administrador lista vínculos de identidade.</summary>
+internal sealed class ListUsersAccessPolicy(ICurrentUser user) : IAccessPolicy<ListUsersRequest>
+{
+    public Task<bool> CanExecuteAsync(ListUsersRequest request, CancellationToken ct) =>
+        Task.FromResult(user.IsAuthenticated && user.HasRole(DefaultRoles.Administrator));
 }
 internal sealed class ListUsersEndpoint : IEndpoint
 {

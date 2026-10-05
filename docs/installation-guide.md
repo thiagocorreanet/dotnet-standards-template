@@ -10,7 +10,7 @@ A geração padrão entrega `Host.Api`, os módulos `Module.Identity` e `Module.
 
 Os módulos de exemplo `Module.Venues`, `Module.People`, `Module.Events` e `Module.Talks` só acompanham o projeto quando você escolhe `--includeExample true`.
 
-O novo projeto recebe uma **cópia do código**, sem referência de execução à pasta do template. A partir daí, suas alterações são independentes. Atualizar o template não atualiza automaticamente projetos já gerados; melhorias futuras precisam ser comparadas e incorporadas conscientemente.
+O novo projeto recebe uma **cópia do código** dos módulos, do host, dos testes, da infra e dos docs, sem referência de execução à pasta do template. As bibliotecas `Shared.*` genéricas chegam como **pacotes NuGet** do feed da base (`--packageFeed`, padrão GitHub Packages; versão em `--sharedPackagesVersion`), e são atualizadas trocando a versão: veja [`upgrading.md`](upgrading.md). O restante não se atualiza sozinho; melhorias do template em módulos, infra e docs precisam ser comparadas e incorporadas conscientemente.
 
 Não são copiados `.env`, `.local/`, `.secrets/`, `.git/`, `bin/`, `obj/`, resultados de testes, artefatos, documentação histórica de origem nem `.template.config/`. Assim, o projeto novo não se torna automaticamente outro template instalável. Mantenha a base original como fonte das próximas gerações.
 
@@ -83,9 +83,16 @@ cd billing-api
 
 Escolha apenas uma modalidade para a mesma pasta. Para comparar as duas, gere nomes e destinos diferentes.
 
-A solução será `api/BillingApi.slnx`; o serviço será `BillingApi.Api` e a chave da conexão será `ConnectionStrings:BillingApi`. Nomes genéricos como `Host.Api`, `Module.Identity` e `Shared.Data` permanecem. Realm e clients OIDC não são renomeados automaticamente com `-n`.
+A solução será `api/BillingApi.slnx`; o serviço será `BillingApi.Api`. A chave da conexão é sempre `ConnectionStrings:Database` (variável `ConnectionStrings__Database`), porque o código que a lê vem do pacote `Shared.Data`. Nomes genéricos como `Host.Api`, `Module.Identity` e `Shared.Data` permanecem. Realm e clients OIDC não são renomeados automaticamente com `-n`.
 
 ## 5. Restaurar, compilar e executar os testes
+
+Defina as credenciais do feed dos pacotes da base (usuário do GitHub e token com `read:packages`; detalhes em [`upgrading.md`](upgrading.md)):
+
+```bash
+export MODULARAPI_FEED_USER=<usuario-github>
+export MODULARAPI_FEED_TOKEN=<token-read-packages>
+```
 
 Na raiz do projeto novo:
 
@@ -93,7 +100,7 @@ Na raiz do projeto novo:
 cd api
 dotnet --version
 dotnet tool restore
-dotnet restore BillingApi.slnx
+dotnet restore BillingApi.slnx    # primeira vez: grava os packages.lock.json; faça commit deles
 dotnet build BillingApi.slnx --no-restore
 dotnet test BillingApi.slnx --no-restore
 cd ..
@@ -115,14 +122,32 @@ O script cria `.env` com permissão restrita e senhas aleatórias, arquivos priv
 
 Não copie `.env`, `.local/` nem volumes da base. Não inclua esses arquivos em Git, tickets, mensagens ou imagens Docker. O script recusa sobrescrever `.env`; isso protege as credenciais ligadas aos volumes existentes.
 
-Suba a stack com observabilidade:
+Há dois modos locais:
+
+| Modo | Serviços | Quando usar |
+|---|---|---|
+| **Lite** (`compose.local.yaml`) | PostgreSQL, Keycloak e API | Dia a dia de desenvolvimento de casos de uso: sobe mais rápido e usa menos memória. A API não exporta OTLP (endpoint vazio) e os logs ficam no console (`docker compose logs api`). |
+| **Completo** (+ `compose.observability.yaml`) | Lite + Collector, Prometheus, Tempo, Loki e Grafana | Investigar traces, métricas e logs correlacionados, mexer em telemetria ou alertas, e antes de liberar mudanças de observabilidade (`smoke-observability.mjs`). |
+
+Modo lite:
 
 ```bash
-docker compose -f compose.local.yaml --profile observability up --build -d
+docker compose -f compose.local.yaml up --build -d
+node scripts/wait-local.mjs --lite
+node scripts/bootstrap-local.mjs
+docker compose -f compose.local.yaml ps -a
+```
+
+Modo completo:
+
+```bash
+docker compose -f compose.local.yaml -f compose.observability.yaml up --build -d
 node scripts/wait-local.mjs
 node scripts/bootstrap-local.mjs
-docker compose -f compose.local.yaml --profile observability ps -a
+docker compose -f compose.local.yaml -f compose.observability.yaml ps -a
 ```
+
+Os dois modos usam o mesmo projeto Compose, o mesmo `.env` e os mesmos volumes; dá para alternar sem perder dados. Ao voltar do completo para o lite, pare com os dois arquivos para também remover os contêineres de observabilidade.
 
 O job `migrate` aplica os schemas e concede permissões limitadas à identidade runtime. `migrate` e `telemetry-init` encerrados com código `0` são esperados: são jobs, não serviços permanentes.
 
@@ -172,6 +197,7 @@ Quando adaptar esses valores, revise conjuntamente:
 - `compose.local.yaml`, `compose.production.yaml` e `appsettings*.json`: issuer, audience e configuração do host.
 - `scripts/init-local.mjs`, `bootstrap-local.mjs`, `wait-local.mjs`, `smoke-oidc.mjs` e demais verificações: os valores da fixture são explícitos nesses arquivos.
 - `DefaultRoles`, `Policies`, `Oidc:AllowedRoles` e testes: padrão `Administrator`, `Organizer`, `Participant`.
+- `Oidc:RoleClaimPath`, `Oidc:RoleMap` e `Oidc:RequireTokenType`, quando o IdP não for Keycloak com client roles. Exemplos e pontos a validar em [`security.md`](security.md).
 
 Faça essas escolhas antes de criar um ambiente definitivo. A importação de `realm.json` ocorre na criação inicial; editar o arquivo não atualiza automaticamente um realm já existente. Uma troca de issuer também exige revisar os vínculos `(issuer, subject)` da API. Não apague banco/volume para aplicar mudanças de roles.
 
@@ -213,13 +239,13 @@ Os workflows ficam em `.github/workflows/`. Eles acompanham a cópia, mas só ex
 Para parar a stack deste projeto preservando os volumes:
 
 ```bash
-docker compose -f compose.local.yaml --profile observability down
+docker compose -f compose.local.yaml -f compose.observability.yaml down
 ```
 
 Para retomá-la:
 
 ```bash
-docker compose -f compose.local.yaml --profile observability up --build -d
+docker compose -f compose.local.yaml -f compose.observability.yaml up --build -d
 node scripts/wait-local.mjs
 ```
 
@@ -239,7 +265,7 @@ Não execute `init-local` nem o bootstrap novamente se já foram concluídos. **
 | API retorna `403` | Confira role do client correto, allowlist e propriedade do recurso; role no realm não basta |
 | Bootstrap informa base já provisionada | Não repita o provisionamento; gerencie o usuário existente pelo fluxo administrativo |
 | Scalar não aparece em produção | Esperado por segurança. Use-o apenas em desenvolvimento |
-| Smoke de telemetria falha | Confira o profile `observability`, readiness e tempo de exportação; não desative os controles de privacidade |
+| Smoke de telemetria falha | Confira se a stack subiu no modo completo (`-f compose.observability.yaml`), readiness e tempo de exportação; não desative os controles de privacidade |
 
 ## 14. Banco legado e produção
 

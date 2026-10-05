@@ -185,10 +185,16 @@
           "Microsoft.Extensions.Logging.Abstractions": "10.0.0"
         }
       },
-      "shared.contracts": {
+      "ModularApi.Shared.Contracts": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.12, )"
+        }
+      },
+      "ModularApi.Shared.Kernel": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {

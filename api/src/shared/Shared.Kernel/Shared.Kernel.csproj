@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Núcleo sem infraestrutura: Result/Error e entidades base usados pelo Domain dos módulos.
+    Não referencia ASP.NET Core nem EF Core; o teste de arquitetura recusa qualquer referência desse tipo.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Shared.Kernel</RootNamespace>
+    <Description>Result/Error e entidades base para o Domain dos módulos, sem ASP.NET Core nem EF Core.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shared.Contracts/Shared.Contracts.csproj" />
+  </ItemGroup>
+</Project>

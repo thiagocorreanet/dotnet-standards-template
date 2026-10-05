@@ -3,6 +3,19 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
+  <PropertyGroup>
+    <!-- Versão dos pacotes Shared.* consumidos pelo projeto gerado (UseSharedPackages=true). Atualização: docs/upgrading.md. -->
+    <SharedPackagesVersion>1.0.0<!--sharedPackagesVersion--></SharedPackagesVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="$(SharedPackagePrefix)Kernel" Version="$(SharedPackagesVersion)" />
+    <PackageVersion Include="$(SharedPackagePrefix)Contracts" Version="$(SharedPackagesVersion)" />
+    <PackageVersion Include="$(SharedPackagePrefix)Data" Version="$(SharedPackagesVersion)" />
+    <PackageVersion Include="$(SharedPackagePrefix)Http" Version="$(SharedPackagesVersion)" />
+    <PackageVersion Include="$(SharedPackagePrefix)Messaging" Version="$(SharedPackagesVersion)" />
+    <PackageVersion Include="$(SharedPackagePrefix)Observability" Version="$(SharedPackagesVersion)" />
+    <PackageVersion Include="$(SharedPackagePrefix)WebHost" Version="$(SharedPackagesVersion)" />
+  </ItemGroup>
   <ItemGroup>
     <!-- Dados -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />

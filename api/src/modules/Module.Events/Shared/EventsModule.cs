@@ -28,7 +28,7 @@ public sealed class EventsModule : IModule
     {
         builder.AddModuleDbContext<EventsDbContext>(EventsDbContext.SchemaName);
         builder.Services.AddScoped<IEventsModuleApi, EventsModuleApi>();
-        builder.Services.AddScoped<IModuleAccessPolicy, EventsAccessPolicy>();
+        builder.Services.AddScoped<EventOrganizerAccess>();
         builder.Services.AddUseCasesFromAssembly(typeof(EventsModule).Assembly, EventsTelemetry.Instance);
         builder.Services.AddModuleValidators(typeof(EventsModule).Assembly);
     }

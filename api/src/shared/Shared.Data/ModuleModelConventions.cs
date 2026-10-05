@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
+using Shared.Data.Inbox;
 using Shared.Data.Outbox;
 using Shared.Data.Transactions;
 
@@ -22,7 +23,10 @@ public static class ModuleModelConventions
         configurationBuilder.Properties<Enum>().HaveConversion<string>().HaveMaxLength(50);
     }
 
-    /// <summary>Tabela <c>OutboxMessages</c> no schema do módulo, payload jsonb e índice para o processador.</summary>
+    /// <summary>
+    /// Tabelas de mensageria no schema do módulo: <c>OutboxMessages</c> (payload jsonb e índice para o processador),
+    /// <c>InboxMessages</c> (idempotência por evento e consumidor), <c>CommandReceipts</c> e <c>OutboxReplayAudit</c>.
+    /// </summary>
     public static void ConfigureOutbox(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<OutboxReplayAudit>(b =>
@@ -31,6 +35,13 @@ public static class ModuleModelConventions
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.ReasonCode).HasMaxLength(80);
+        });
+        modelBuilder.Entity<InboxMessage>(b =>
+        {
+            b.ToTable("InboxMessages");
+            b.HasKey(x => new { x.EventId, x.Consumer });
+            b.Property(x => x.Consumer).HasMaxLength(InboxRecorder.MaxConsumerLength);
+            b.HasIndex(x => x.ProcessedAt);
         });
         modelBuilder.Entity<CommandReceipt>(b =>
         {

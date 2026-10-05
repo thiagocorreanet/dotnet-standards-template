@@ -26,7 +26,6 @@ public sealed class VenuesModule : IModule
     {
         builder.AddModuleDbContext<VenuesDbContext>(VenuesDbContext.SchemaName);
         builder.Services.AddScoped<IVenuesModuleApi, VenuesModuleApi>();
-        builder.Services.AddScoped<IModuleAccessPolicy, VenuesAccessPolicy>();
         builder.Services.AddUseCasesFromAssembly(typeof(VenuesModule).Assembly, VenuesTelemetry.Instance);
         builder.Services.AddModuleValidators(typeof(VenuesModule).Assembly);
     }

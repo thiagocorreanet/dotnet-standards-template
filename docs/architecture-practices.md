@@ -5,7 +5,7 @@ Guia de consulta para decidir **onde** uma responsabilidade mora, **quando** um 
 Complementa três documentos, sem repeti-los:
 
 - [`CLAUDE.md`](../CLAUDE.md) — contrato de trabalho e invariantes.
-- [`architecture.md`](architecture.md) — as decisões já tomadas (ADR-001 a ADR-007) e suas consequências.
+- [`architecture.md`](architecture.md) — as decisões já tomadas (ADR-001 a ADR-010) e suas consequências, e as propostas ainda em aberto (ADR-011 a ADR-015: jobs agendados, arquivos, cache, idempotência de cliente, multi-tenancy).
 - [`dotnet-practices.md`](dotnet-practices.md) — como escrever o código do dia a dia.
 
 Aqui está o raciocínio que liga os três: como aplicar princípios de arquitetura a um monolito modular real, com fronteira transacional explícita, Outbox e autorização por recurso.
@@ -35,7 +35,7 @@ Aqui está o raciocínio que liga os três: como aplicar princípios de arquitet
 ## 1. Três níveis de decisão
 
 - **Essencial** — protege correção, segurança ou integridade. Não é negociável em revisão. Exemplo: autorizar o acesso ao recurso, não só ao endpoint; gravar estado e evento na mesma transação.
-- **Preferência** — bom ponto de partida desta base, ajustável com justificativa. Exemplo: organizar cada caso de uso em `UseCases/<Name>/` com as cinco responsabilidades separadas; usar `Result` em vez de exceção.
+- **Preferência** — bom ponto de partida desta base, ajustável com justificativa. Exemplo: organizar cada caso de uso em `UseCases/<Name>/` com as seis responsabilidades separadas; usar `Result` em vez de exceção.
 - **Condicional** — acrescenta custo e exige necessidade identificada. Exemplo: cache distribuído, broker externo, multi-tenancy, extração de um módulo.
 
 Essencial é a **garantia**, não a ferramenta. "Detectar edição concorrente" é essencial quando a regra exige; o token de concorrência é uma das implementações. "Coordenar invariantes entre módulos" é essencial no exemplo; o advisory lock do PostgreSQL é a implementação escolhida em ADR-004.
@@ -49,8 +49,8 @@ Antes de acrescentar qualquer abstração, explicite: o comportamento que ela pr
 
 1. **Descreva a operação.** Quem executa, o que entra, o que sai, quais regras valem, quais falhas são esperadas.
 2. **Localize o módulo dono.** Quem possui o dado e a regra? Se a resposta for "dois módulos", volte à seção [8](#8-entre-modulos) antes de escrever código.
-3. **Defina a fronteira.** É leitura ou escrita? Escrita entra com `[Command("chave")]`; escolha a chave pelo conjunto de invariantes, não pelo endpoint.
-4. **Defina autorização.** Perfil basta ou existe propriedade do recurso? Acrescente o caso na `IModuleAccessPolicy` do módulo antes de implementar o fluxo feliz.
+3. **Defina a fronteira.** É leitura ou escrita? Escrita entra com `[Command]` (chave = módulo), `[Command("recurso:{Id}")]` ou uma chave compartilhada; escolha pelo conjunto de invariantes, não pelo endpoint.
+4. **Defina autorização.** Perfil basta ou existe propriedade do recurso? Escreva a `<Name>AccessPolicy` do slice antes de implementar o fluxo feliz.
 5. **Escreva o domínio primeiro.** Entidade com método nomeado, normalização, erro estável em `<Name>Errors.cs`, evento com `RecordEvent` quando houver fato a publicar.
 6. **Escreva o caso de uso.** Verificações, chamada ao domínio, `ExecuteInTransactionAsync`, retorno `Result`.
 7. **Escreva request, validator e endpoint.** Só formato no validator; só transporte e documentação no endpoint.
@@ -63,11 +63,11 @@ Fluxo típico de uma escrita, já implementado pela base:
 ```text
 HTTP → autenticação OIDC → limite por usuário → policy de perfil do endpoint
      → validação (FluentValidation) → decoração transacional (BEGIN + advisory lock)
-     → policy de recurso do módulo → caso de uso → domínio
+     → policy de recurso do caso de uso → caso de uso → domínio
      → estado + Outbox + CommandReceipt → COMMIT
 ```
 
-Leituras passam por autenticação, policy do módulo e telemetria, sem transação nem lock. Não crie etapas artificiais numa consulta simples.
+Leituras passam por autenticação, policy do caso de uso e telemetria, sem transação nem lock. Não crie etapas artificiais numa consulta simples.
 
 <a id="3-proporcao"></a>
 ## 3. Por que esta estrutura e quando ela deixa de servir
@@ -93,7 +93,8 @@ Microsserviço exige justificativa que compense rede, falha parcial, contratos, 
 ```text
 Host.Api ──────────────► Module.*            (descoberta de assemblies Module.*.dll)
 Host.Api ──────────────► Shared.WebHost, Shared.Data, Shared.Messaging, Shared.Observability
-Module.<Name> ─────────► Shared.Contracts, Shared.Data, Shared.Http, Shared.Observability
+Module.<Name> ─────────► Shared.Contracts, Shared.Kernel, Shared.Data, Shared.Http, Shared.Observability
+Module.<Name>/Domain ──► somente Shared.Kernel e Shared.Contracts (além de System.*)
 Module.<Name> ──╳─────► Module.<Other>       (proibido; teste de arquitetura falha)
 Module.<Name>/Domain ──╳─────► UseCases/, Shared/  (proibido; teste de arquitetura falha)
 Shared.* ──────╳─────► Module.*              (infraestrutura não conhece negócio)
@@ -108,13 +109,13 @@ Dentro de um módulo, as camadas existem como **pastas com regra de dependência
 | Transporte HTTP e documentação | `UseCases/<Name>/*Endpoint.cs` | O contrato `IUseCase`, nada de regra |
 | Formato de entrada | `UseCases/<Name>/*Validator.cs` | O request e helpers do módulo |
 | Infraestrutura do módulo | `Shared/` | EF Core, DI, o domínio, handlers |
-| Contrato entre módulos | `Shared.Contracts/` | Somente DTOs e interfaces |
+| Contrato entre módulos | `Shared.Contracts.Modules/` (genéricos em `Shared.Contracts`) | Somente DTOs e interfaces |
 
 `internal` limita acesso por assembly. Como cada módulo é um assembly, `internal` é uma fronteira real aqui: casos de uso, endpoints, validators e policies são `internal`; só o `IModule`, o `DbContext` e a implementação do contrato público precisam ser `public`.
 
 Pasta e namespace localizam código; não impedem acoplamento. Por isso as fronteiras que importam têm teste em `Tests.Architecture`: dependência entre módulos, independência do `Domain`, ausência de repositório, convenções de nome e namespace de casos de uso. Ao criar um módulo, ele entra automaticamente nesses testes pela descoberta de assemblies — não há lista para manter.
 
-Contratos vivem junto de quem precisa deles: `IPeopleModuleApi` está em `Shared.Contracts` porque os consumidores são outros módulos; a implementação `PeopleModuleApi` está no módulo dono. Essa é a regra de dependência invertida na prática, sem criar um projeto por camada.
+Contratos vivem junto de quem precisa deles: `IPeopleModuleApi` está em `Shared.Contracts.Modules` porque os consumidores são outros módulos; a implementação `PeopleModuleApi` está no módulo dono. Essa é a regra de dependência invertida na prática, sem criar um projeto por camada.
 
 <a id="5-solid"></a>
 ## 5. SOLID aplicado com critério
@@ -122,8 +123,8 @@ Contratos vivem junto de quem precisa deles: `IPeopleModuleApi` está em `Shared
 | Princípio | Aplicação útil nesta base | Exagero a evitar |
 |---|---|---|
 | SRP | Separar transporte (endpoint), coordenação (caso de uso), regra (domínio) e adaptação (módulo) | Criar uma classe por linha, ou confundir responsabilidade com número de métodos |
-| OCP | Ponto de extensão identificado: `IModule`, `IModuleAccessPolicy`, `IIntegrationEventHandler` | Sistema de plug-ins para variação imaginada |
-| LSP | Todo `IModuleAccessPolicy` decide de verdade; todo `IUseCase` retorna `Result`, não lança para regra | Implementar contrato com operação essencial jogando `NotSupportedException` |
+| OCP | Ponto de extensão identificado: `IModule`, `IAccessPolicy<TRequest>`, `IIntegrationEventHandler` | Sistema de plug-ins para variação imaginada |
+| LSP | Toda `IAccessPolicy<TRequest>` decide de verdade; todo `IUseCase` retorna `Result`, não lança para regra | Implementar contrato com operação essencial jogando `NotSupportedException` |
 | ISP | Contrato de módulo expõe o mínimo: `IPeopleModuleApi` devolve resumo com id, nome e e-mail de pessoas ativas | Interface que publica `DbSet` ou `IQueryable` e promete independência que não entrega |
 | DIP | Módulo depende de `Shared.Contracts`; a implementação é registrada pelo dono | `IClasse` para toda classe, inclusive tipo interno estável |
 
@@ -140,7 +141,7 @@ Coloque a regra no lugar que consegue garanti-la em **todos** os caminhos de exe
 |---|---|---|
 | Formato da entrada | Campo obrigatório, tamanho, e-mail válido, CPF com dígitos corretos | `*Validator` (FluentValidation), filtro do endpoint |
 | Permissão de perfil | Só administrador altera roles | `RequireAuthorization` / role no endpoint |
-| Permissão sobre o recurso | Só o dono edita a própria pessoa | `IModuleAccessPolicy`, dentro da transação nos comandos |
+| Permissão sobre o recurso | Só o dono edita a própria pessoa | `IAccessPolicy<TRequest>` do slice, dentro da transação nos comandos |
 | Invariante do agregado | Capacidade não pode ficar abaixo de confirmados | Método do domínio |
 | Coordenação | Carregar, aplicar, publicar evento, persistir | Caso de uso |
 | Invariante persistida | Unicidade de e-mail, não sobreposição de sala | Índice único, constraint, exclusão temporal |
@@ -165,8 +166,9 @@ Esta é a decisão arquitetural mais específica da base (ADR-003 e ADR-004) e a
 2. Liste todos os escritores que podem violá-las — incluindo outros módulos e rotinas administrativas.
 3. Se esse conjunto já é coordenado por uma chave existente, use a mesma chave.
 4. Só crie chave nova quando o conjunto for comprovadamente independente do existente.
+5. Chave por recurso (`[Command("events:{EventId}")]`) é a forma mais estreita: use quando todos os escritores da invariante tocam o mesmo recurso identificado no request. Se a regra também lê outro recurso que pode mudar em paralelo, a chave por recurso não basta.
 
-O exemplo usa uma única chave (`event-management-example`) para todos os comandos, porque as invariantes atravessam quatro módulos. Isso serializa as escritas do exemplo: custo deliberado, documentado, e não uma promessa de throughput. Uma evolução medida pode adotar locks por agregado, com ordem estável e a matriz completa de participantes — e isso é um ADR, não um ajuste local.
+O exemplo usa uma única chave (`event-management-example`) para todos os comandos, porque as invariantes atravessam quatro módulos. Isso serializa as escritas do exemplo: custo deliberado, documentado, e não uma promessa de throughput. Uma evolução medida pode adotar locks por agregado, com ordem estável e a matriz completa de participantes — e isso é um ADR, não um ajuste local. A base já resolve placeholders por recurso (ADR-009), mas com uma chave por comando: várias chaves exigiriam ordem estável de aquisição e não são suportadas.
 
 **Chave nova mal escolhida falha em silêncio.** Duas chaves diferentes para escritores da mesma invariante não produzem erro: produzem corrupção sob concorrência. Toda mudança de chave precisa de teste concorrente.
 
@@ -208,7 +210,7 @@ O contrato de entrega está em ADR-005. O que decidir ao criar um evento:
 
 **`requiresConsumer`.** `true` quando a ausência de consumidor é falha de configuração — o efeito é obrigatório. `false` para evento observacional. Escolha explicitamente; o padrão é `true`.
 
-**Idempotência é do consumidor.** A entrega é pelo menos uma vez e a ordem não é garantida entre réplicas. O consumidor precisa de deduplicação própria por evento e consumidor, ou de efeito naturalmente idempotente — a auditoria usa a chave do evento com `INSERT ON CONFLICT`. Deduplicação de broker, quando houver um no futuro, não substitui isso.
+**Idempotência por evento e consumidor vem da Inbox.** A entrega é pelo menos uma vez e a ordem não é garantida entre réplicas. Handler registrado por `AddIntegrationEventHandler` grava `(EventId, Consumer)` na transação do próprio efeito; isso vale para escrita no `DbContext` do módulo consumidor. Efeito fora dele precisa de idempotência no destino, e o opt-out (`[SkipInbox]`) exige justificativa — a auditoria usa a chave do evento com `INSERT ON CONFLICT`. Deduplicação de broker, quando houver um no futuro, não substitui isso.
 
 **Escopo e falha.** Cada mensagem recebe um escopo DI isolado; handlers da mesma mensagem compartilham o escopo e devem ser independentes entre si. Falha de um handler repete a mensagem inteira — projete para isso. Esgotadas as tentativas, a mensagem vai para dead letter, que é terminal; replay é ação administrativa com `reasonCode` e registro do ator, nunca automática.
 
@@ -223,7 +225,7 @@ Um caso de uso, um endpoint, dentro do grupo do módulo (`api/v1/<route>`), com 
 |---|---|---|
 | Entrada inválida | 400 | Filtro de validação (`ValidationProblemDetails`) |
 | Credencial ausente ou inválida | 401 | Pipeline OIDC ou `ErrorType.Unauthorized` |
-| Autenticado sem permissão | 403 | `IModuleAccessPolicy` ou `ErrorType.Forbidden` |
+| Autenticado sem permissão | 403 | `IAccessPolicy<TRequest>` ou `ErrorType.Forbidden` |
 | Recurso inexistente | 404 | `ErrorType.NotFound` |
 | Conflito de estado ou unicidade | 409 | `ErrorType.Conflict` |
 | Invariante de negócio violada | 422 | `ErrorType.BusinessRule` |
@@ -264,7 +266,7 @@ O que isso implica no desenho:
 
 - **Autorização acontece em dois lugares, com papéis diferentes.** Perfil no endpoint é barreira grossa; propriedade do recurso é decisão do módulo, dentro da fronteira transacional. Um identificador válido na URL não prova permissão.
 - **A API decide, o IdP não.** Roles vêm do client da API e de uma allowlist; claims internas recebidas são removidas. Remoção de role apenas no IdP leva até 300 s mais o skew para valer; mudança urgente exige também corte local.
-- **Falha fechada.** Execução sem policy registrada é rejeitada; policy que não reconhece o request nega.
+- **Falha fechada.** Caso de uso sem policy derruba a composição no startup e reprova o teste de arquitetura; a policy nega por padrão quando não reconhece o contexto.
 - **Privacidade é restrição de arquitetura, não filtro no final.** Auditoria mascara valores por padrão; telemetria não exporta payload, SQL com valores nem stack livre. `AuditValue()` é exceção explícita para dado não sensível e de cardinalidade controlada.
 - **Single-organization por decisão.** Multi-tenancy toca entidades, contratos, índices, policies, dados históricos e testes de isolamento. É um projeto, não uma claim.
 

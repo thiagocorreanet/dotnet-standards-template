@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,6 +21,8 @@ for (const input of inputs) {
     for (const [document, classes] of Object.entries(documents)) {
       const file = document.replaceAll('\\', '/').split('/api/src/')[1];
       if (!file) throw new Error('Documento de cobertura fora de api/src: ' + document);
+      // Código de pacote (PDB embutido) aponta para fontes que não estão neste projeto: não entra na cobertura daqui.
+      if (!existsSync(resolve(root, 'api/src', file))) continue;
       const key = module + '/' + file;
       const entry = files.get(key) ?? { module, file, lines: new Map(), branches: new Map() };
       files.set(key, entry);
@@ -59,7 +61,9 @@ function check(name, actual, minimum) {
     failures.push(name + ': cobertura insuficiente ou ausente');
 }
 check('total', summary.total, policy.total);
-for (const [file, minimum] of Object.entries(policy.files)) check(file, summary.files[file], minimum);
+// No projeto gerado, as bibliotecas Shared.* chegam como pacote: o gate de arquivo só vale para código presente na árvore.
+for (const [file, minimum] of Object.entries(policy.files))
+  if (existsSync(resolve(root, 'api/src', file))) check(file, summary.files[file], minimum);
 for (const [module, result] of Object.entries(summary.assemblies))
   console.log(module + ': linhas=' + result.linePercent.toFixed(2) + '% branches=' + result.branchPercent.toFixed(2) + '%');
 console.log('Total: linhas=' + summary.total.linePercent.toFixed(2) + '% branches=' + summary.total.branchPercent.toFixed(2) + '%');

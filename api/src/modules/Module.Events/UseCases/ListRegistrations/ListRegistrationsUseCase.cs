@@ -6,7 +6,7 @@ using Shared.Contracts.Common;
 using Shared.Contracts.People;
 using Shared.Data.Extensions;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Events.UseCases.ListRegistrations;
 
@@ -20,7 +20,6 @@ internal sealed class ListRegistrationsUseCase(EventsDbContext db, IPeopleModule
             .AnyAsync(e => e.Id == request.EventId, cancellationToken);
         if (!eventExists)
         {
-            logger.LogInformation("Listagem de inscrições rejeitada: evento {EventId} não encontrado", request.EventId);
             return EventsErrors.EventNotFound;
         }
 
@@ -31,12 +30,7 @@ internal sealed class ListRegistrationsUseCase(EventsDbContext db, IPeopleModule
 
         if (request.RegistrationStatus.HasValue)
         {
-            logger.LogDebug("Aplicando filtro de situação {RegistrationStatus} às inscrições do evento {EventId}", request.RegistrationStatus, request.EventId);
             query = query.Where(i => i.RegistrationStatus == request.RegistrationStatus.Value);
-        }
-        else
-        {
-            logger.LogDebug("Listagem de inscrições do evento {EventId} inclui todas as situações", request.EventId);
         }
 
         var page = await query
@@ -45,12 +39,9 @@ internal sealed class ListRegistrationsUseCase(EventsDbContext db, IPeopleModule
             .ToPagedResultAsync(new PagedRequest(request.Page, request.PageSize), cancellationToken);
 
         var personIds = page.Items.Select(i => i.PersonId).Distinct().ToList();
-        logger.LogInformation("Página de inscrições do evento {EventId} contém {RegistrationCount} item(ns) e {PersonCount} pessoa(s) distinta(s)", request.EventId, page.Items.Count, personIds.Count);
-        logger.LogDebug("Consultando módulo Pessoas em lote para enriquecer {PersonCount} inscrição(ões)", personIds.Count);
         IReadOnlyList<PersonSummary> summaries;
         if (personIds.Count == 0)
         {
-            logger.LogDebug("Página sem inscrições; chamada ao módulo Pessoas ignorada");
             summaries = [];
         }
         else
@@ -63,12 +54,7 @@ internal sealed class ListRegistrationsUseCase(EventsDbContext db, IPeopleModule
         {
             logger.LogWarning("Módulo Pessoas não retornou {MissingPersonCount} de {PersonCount} pessoa(s) referenciada(s) nas inscrições do evento {EventId}", missingPeople, personIds.Count, request.EventId);
         }
-        else
-        {
-            logger.LogDebug("Todas as {PersonCount} pessoa(s) das inscrições foram localizadas", personIds.Count);
-        }
 
-        logger.LogDebug("Mapeando {RegistrationCount} inscrição(ões) com os resumos de pessoas", page.Items.Count);
         var items = page.Items
             .Select(i =>
             {
@@ -76,8 +62,6 @@ internal sealed class ListRegistrationsUseCase(EventsDbContext db, IPeopleModule
                 return new ListRegistrationsItemResponse(i.Id, i.PersonId, person?.PersonName ?? string.Empty, person?.PersonEmail ?? string.Empty, i.RegistrationStatus, i.RegistrationRegisteredAt);
             })
             .ToList();
-
-        logger.LogInformation("Listagem do evento {EventId} produziu {RegistrationCount} inscrição(ões) enriquecida(s)", request.EventId, items.Count);
 
         return new PagedResult<ListRegistrationsItemResponse>(items, page.Page, page.PageSize, page.Total);
     }

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using Module.Talks.Domain;
 using Module.Talks.Shared;
 using Module.Talks.UseCases.CreateTalk;
@@ -7,7 +6,7 @@ using NSubstitute;
 using Shared.Contracts.Events;
 using Shared.Contracts.Venues;
 using Shared.Contracts.People;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Shouldly;
 
 namespace Tests.Unit.Talks;
@@ -37,9 +36,8 @@ public sealed class CreateTalkUseCaseTests : IDisposable
 
     private CreateTalkUseCase CreateUseCase() => new(
         _db,
-        new TalkScheduleChecker(_events, _venues, NullLogger<TalkScheduleChecker>.Instance),
-        _people,
-        NullLogger<CreateTalkUseCase>.Instance);
+        new TalkScheduleChecker(_events, _venues),
+        _people);
 
     private static CreateTalkRequest Request(Guid? roomId = null) => new(
         Guid.NewGuid(), Guid.NewGuid(), roomId, "Monolito modular", null, EventStart.AddHours(1), EventStart.AddHours(2),

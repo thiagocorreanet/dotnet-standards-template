@@ -1,3 +1,4 @@
+# Modo lite: PostgreSQL, Keycloak e API. Para o modo completo, acrescente -f compose.observability.yaml.
 name: ${COMPOSE_PROJECT_NAME:-modular-api-local}
 services:
   postgres:
@@ -40,7 +41,11 @@ services:
       backend:
         aliases: [identity.localhost]
   migrate:
-    build: { context: ./api, dockerfile: src/hosts/Host.Api/Dockerfile }
+    build:
+      context: ./api
+      dockerfile: src/hosts/Host.Api/Dockerfile
+      # Só usados no projeto gerado, para baixar os pacotes ModularApi.* do feed privado; ausentes, o build segue sem eles.
+      secrets: [modularapi_feed_user, modularapi_feed_token]
     image: ${COMPOSE_PROJECT_NAME:-modular-api-local}:local
     command: ["migrate"]
     environment: &api-environment
@@ -53,7 +58,7 @@ services:
       AllowedHosts: "localhost;127.0.0.1;api"
     secrets:
       - source: migrator-db
-        target: ConnectionStrings__ModularApi
+        target: ConnectionStrings__Database
     depends_on:
       postgres: { condition: service_healthy }
     networks: [backend]
@@ -68,7 +73,7 @@ services:
       Bootstrap__Email: developer@example.test
     secrets:
       - source: runtime-db
-        target: ConnectionStrings__ModularApi
+        target: ConnectionStrings__Database
     depends_on:
       migrate: { condition: service_completed_successfully }
     networks: [backend]
@@ -76,13 +81,14 @@ services:
     image: ${COMPOSE_PROJECT_NAME:-modular-api-local}:local
     environment:
       <<: *api-environment
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://collector:4317
+      # Modo lite: endpoint vazio desliga a exportação OTLP; logs seguem no console. O modo completo usa compose.observability.yaml.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ""
       Observability__TraceSampleRatio: "1.0"
       Cors__AllowedOrigins__0: http://localhost:5173
     ports: ["127.0.0.1:5761:8080"]
     secrets:
       - source: runtime-db
-        target: ConnectionStrings__ModularApi
+        target: ConnectionStrings__Database
     depends_on:
       migrate: { condition: service_completed_successfully }
       keycloak: { condition: service_started }
@@ -92,84 +98,12 @@ services:
     security_opt: [no-new-privileges:true]
     stop_grace_period: 30s
     networks: [backend]
-  collector:
-    image: otel/opentelemetry-collector-contrib:0.161.0
-    profiles: [observability]
-    command: ["--config=/etc/collector.yaml"]
-    volumes:
-      - ./infra/observability/collector.yaml:/etc/collector.yaml:ro
-      - collector-data:/var/lib/otelcol
-    ports: ["127.0.0.1:4317:4317"]
-    user: "10001:10001"
-    depends_on:
-      telemetry-init: { condition: service_completed_successfully }
-      tempo: { condition: service_started }
-      loki: { condition: service_started }
-    networks: [backend]
-  prometheus:
-    image: prom/prometheus:v3.14.0
-    profiles: [observability]
-    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=15d"]
-    volumes:
-      - ./infra/observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
-      - ./infra/observability/alerts.yaml:/etc/prometheus/alerts.yaml:ro
-      - prometheus-data:/prometheus
-    ports: ["127.0.0.1:9090:9090"]
-    networks: [backend]
-  tempo:
-    image: grafana/tempo:3.0.3
-    profiles: [observability]
-    command: ["-target=all", "-config.file=/etc/tempo.yaml"]
-    depends_on:
-      telemetry-init: { condition: service_completed_successfully }
-    volumes:
-      - ./infra/observability/tempo.yaml:/etc/tempo.yaml:ro
-      - tempo-data:/var/tempo
-    networks: [backend]
-  loki:
-    image: grafana/loki:3.7.8
-    profiles: [observability]
-    command: ["-config.file=/etc/loki/config.yaml"]
-    depends_on:
-      telemetry-init: { condition: service_completed_successfully }
-    volumes:
-      - ./infra/observability/loki.yaml:/etc/loki/config.yaml:ro
-      - loki-data:/loki
-    networks: [backend]
-  grafana:
-    image: grafana/grafana:13.2.2
-    profiles: [observability]
-    environment:
-      GF_SECURITY_ADMIN_USER: operator
-      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-password
-      GF_AUTH_ANONYMOUS_ENABLED: "false"
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_ANALYTICS_REPORTING_ENABLED: "false"
-    secrets: [grafana-password]
-    ports: ["127.0.0.1:3000:3000"]
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    networks: [backend]
-  telemetry-init:
-    image: alpine:3.22
-    profiles: [observability]
-    command: ["sh", "-ec", "chown 10001:10001 /collector /tempo /loki"]
-    volumes: ["collector-data:/collector", "tempo-data:/tempo", "loki-data:/loki"]
-    network_mode: none
-    cap_drop: [ALL]
-    cap_add: [CHOWN]
 networks:
   backend: {}
 volumes:
   postgres-data: {}
-  collector-data: {}
-  prometheus-data: {}
-  tempo-data: {}
-  loki-data: {}
-  grafana-data: {}
 secrets:
+  modularapi_feed_user: { environment: MODULARAPI_FEED_USER }
+  modularapi_feed_token: { environment: MODULARAPI_FEED_TOKEN }
   runtime-db: { file: ./.local/runtime-db }
   migrator-db: { file: ./.local/migrator-db }
-  grafana-password: { file: ./.local/grafana-password }

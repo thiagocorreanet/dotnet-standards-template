@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Project Team",
+  "classifications": ["Web", "API", "Modular"],
+  "identity": "ModularApi.UseCase",
+  "name": "Caso de uso do Modular API",
+  "description": "Cria Request, Response, Validator, UseCase, Endpoint, AccessPolicy (negando) e um teste unitário em um módulo existente. Execute na pasta api/ do projeto.",
+  "shortName": "modular-usecase",
+  "sourceName": "UseCaseName",
+  "preferNameDirectory": false,
+  "tags": { "language": "C#", "type": "item" },
+  "symbols": {
+    "module": {
+      "type": "parameter",
+      "datatype": "text",
+      "isRequired": true,
+      "replaces": "ModuleName",
+      "fileRename": "ModuleName",
+      "description": "Nome do módulo existente, sem o prefixo Module. (ex.: Billing para Module.Billing)."
+    },
+    "command": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Gera uma escrita com [Command] e POST; sem a opção, gera uma consulta com GET por id."
+    },
+    "useCaseRoute": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "kebabCase",
+      "replaces": "use-case-route",
+      "description": "Rota em kebab-case derivada do nome."
+    }
+  },
+  "sources": [
+    { "source": "./", "target": "./", "exclude": [".template.config/**"] }
+  ],
+  "postActions": [
+    {
+      "description": "Próximos passos.",
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "args": {},
+      "manualInstructions": [{ "text": "Escreva a regra da AccessPolicy (nasce negando), o contrato e a implementação; troque o teste de acesso pela matriz permitido/negado. Se a pasta src/modules/Module.<módulo> não existir, o caso de uso foi gerado fora de um projeto: confira --module e rode em api/." }],
+      "continueOnError": true
+    }
+  ]
+}
