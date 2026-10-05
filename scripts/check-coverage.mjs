@@ -21,6 +21,8 @@ for (const input of inputs) {
     for (const [document, classes] of Object.entries(documents)) {
       const file = document.replaceAll('\\', '/').split('/api/src/')[1];
       if (!file) throw new Error('Documento de cobertura fora de api/src: ' + document);
+      // Código de pacote (PDB embutido) aponta para fontes que não estão neste projeto: não entra na cobertura daqui.
+      if (!existsSync(resolve(root, 'api/src', file))) continue;
       const key = module + '/' + file;
       const entry = files.get(key) ?? { module, file, lines: new Map(), branches: new Map() };
       files.set(key, entry);
