@@ -15,7 +15,7 @@ public sealed class OutboxMessage
     public DateTimeOffset? DeadLetteredAt { get; set; }
     public string? TraceParent { get; init; }
 }
-public sealed class OutboxReplayAudit : Shared.Data.Entities.IImmutableRecord
+public sealed class OutboxReplayAudit : Shared.Kernel.Entities.IImmutableRecord
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public Guid MessageId { get; init; }

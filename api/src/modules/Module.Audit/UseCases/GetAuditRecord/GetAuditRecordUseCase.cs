@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Module.Audit.Domain;
 using Module.Audit.Shared;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Audit.UseCases.GetAuditRecord;
 

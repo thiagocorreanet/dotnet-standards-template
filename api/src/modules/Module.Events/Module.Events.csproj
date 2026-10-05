@@ -14,6 +14,7 @@
 
     <ProjectReference Include="../../shared/Shared.Contracts/Shared.Contracts.csproj" />
     <ProjectReference Include="../../shared/Shared.Data/Shared.Data.csproj" />
+    <ProjectReference Include="../../shared/Shared.Kernel/Shared.Kernel.csproj" />
     <ProjectReference Include="../../shared/Shared.Http/Shared.Http.csproj" />
     <ProjectReference Include="../../shared/Shared.Observability/Shared.Observability.csproj" />
     <ProjectReference Include="../../shared/Shared.Messaging/Shared.Messaging.csproj" />

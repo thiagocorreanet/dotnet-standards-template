@@ -1,4 +1,4 @@
-namespace Shared.Data.Entities;
+namespace Shared.Kernel.Entities;
 
 /// <summary>
 /// Campos obrigatórios de auditoria e soft delete de toda entidade principal.

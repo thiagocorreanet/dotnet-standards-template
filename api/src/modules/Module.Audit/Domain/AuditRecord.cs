@@ -7,7 +7,7 @@ namespace Module.Audit.Domain;
 /// NÃO herda <c>BaseEntity</c> (não sofre update, soft delete nem auto-auditoria). O <see cref="Id"/> é o Id do evento
 /// <see cref="EntityChanged"/> que o originou, o que torna a persistência idempotente diante de reentregas do Outbox.
 /// </summary>
-public sealed class AuditRecord : global::Shared.Data.Entities.IImmutableRecord
+public sealed class AuditRecord : global::Shared.Kernel.Entities.IImmutableRecord
 {
     private AuditRecord()
     {

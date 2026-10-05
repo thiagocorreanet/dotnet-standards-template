@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using Microsoft.EntityFrameworkCore.Storage;
 using Shared.Data.Transactions;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Shared.Http.Endpoints;
 

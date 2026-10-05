@@ -24,8 +24,8 @@ namespace Tests.Functional.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("pt-BR"), "Features", "Gestão do ciclo de vida de eventos", "  Como organizador\n  Quero criar e administrar eventos\n  Para disponibilizar uma " +
-                "programação consistente", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("pt-BR"), "Features", "Gestão do ciclo de vida de eventos", "  Como organizador\r\n  Quero criar e administrar eventos\r\n  Para disponibilizar um" +
+                "a programação consistente", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

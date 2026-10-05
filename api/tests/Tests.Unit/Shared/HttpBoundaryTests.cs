@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Shared.Http.Validation;
 using Shouldly;
 

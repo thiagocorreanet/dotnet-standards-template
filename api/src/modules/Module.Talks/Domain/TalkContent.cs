@@ -1,4 +1,4 @@
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
 
 namespace Module.Talks.Domain;
 

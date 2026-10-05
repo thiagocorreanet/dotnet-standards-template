@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Shared.Contracts.Identity;
 using Shared.Http.Endpoints;
 using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Module.Identity.Shared;
 using Shared.Contracts.Common;
 namespace Module.Identity.UseCases.UpdateUserAccess;

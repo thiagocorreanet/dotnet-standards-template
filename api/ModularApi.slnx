@@ -11,6 +11,7 @@
     <Project Path="src/shared/Shared.Contracts/Shared.Contracts.csproj" />
     <Project Path="src/shared/Shared.Data/Shared.Data.csproj" />
     <Project Path="src/shared/Shared.Http/Shared.Http.csproj" />
+    <Project Path="src/shared/Shared.Kernel/Shared.Kernel.csproj" />
     <Project Path="src/shared/Shared.Messaging/Shared.Messaging.csproj" />
     <Project Path="src/shared/Shared.Observability/Shared.Observability.csproj" />
     <Project Path="src/shared/Shared.WebHost/Shared.WebHost.csproj" />

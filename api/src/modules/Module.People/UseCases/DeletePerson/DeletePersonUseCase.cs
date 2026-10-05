@@ -4,7 +4,7 @@ using Module.People.Domain;
 using Module.People.Shared;
 using Shared.Data.Extensions;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.People.UseCases.DeletePerson;
 

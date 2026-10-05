@@ -5,7 +5,7 @@ using Shared.Contracts.Common;
 using Shared.Contracts.Identity;
 using Shared.Contracts.People;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 namespace Module.Talks.UseCases.ValidateCertificate;
 /// <summary>Snapshot histórico. Na consulta anônima o nome do titular não é divulgado.</summary>
 internal sealed class ValidateCertificateUseCase(TalksDbContext db, ICurrentUser user, IPeopleModuleApi people)

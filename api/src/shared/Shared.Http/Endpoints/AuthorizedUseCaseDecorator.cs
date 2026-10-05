@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 namespace Shared.Http.Endpoints;
 internal sealed class AuthorizedUseCaseDecorator<TRequest, TResponse>(IUseCase<TRequest, TResponse> inner, IModuleAccessPolicy policy)
     : IUseCase<TRequest, TResponse>

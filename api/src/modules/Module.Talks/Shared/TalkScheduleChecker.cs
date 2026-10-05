@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Module.Talks.Domain;
 using Shared.Contracts.Events;
 using Shared.Contracts.Venues;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Talks.Shared;
 

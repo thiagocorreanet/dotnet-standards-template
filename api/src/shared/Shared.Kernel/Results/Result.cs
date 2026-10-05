@@ -1,4 +1,4 @@
-namespace Shared.Http.Results;
+namespace Shared.Kernel.Results;
 
 /// <summary>Padrão Result: casos de uso nunca lançam exceção para regra de negócio; retornam sucesso ou <see cref="Error"/>.</summary>
 public class Result

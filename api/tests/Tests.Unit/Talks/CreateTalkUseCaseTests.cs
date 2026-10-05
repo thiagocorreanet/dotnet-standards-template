@@ -7,7 +7,7 @@ using NSubstitute;
 using Shared.Contracts.Events;
 using Shared.Contracts.Venues;
 using Shared.Contracts.People;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Shouldly;
 
 namespace Tests.Unit.Talks;

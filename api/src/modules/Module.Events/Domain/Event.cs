@@ -1,6 +1,6 @@
 using Shared.Contracts.Events;
-using Shared.Data.Entities;
-using Shared.Http.Results;
+using Shared.Kernel.Entities;
+using Shared.Kernel.Results;
 
 namespace Module.Events.Domain;
 

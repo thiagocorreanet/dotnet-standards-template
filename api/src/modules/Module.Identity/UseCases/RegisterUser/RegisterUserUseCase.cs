@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Shared.Contracts.Identity;
 using Shared.Http.Endpoints;
 using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Shared.Http.Validation;
 using Module.Identity.Shared;
 using Microsoft.Extensions.Options;

@@ -24,8 +24,8 @@ namespace Tests.Functional.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("pt-BR"), "Features", "Consulta da trilha de auditoria", "  Como administrador\n  Quero rastrear alterações da aplicação\n  Para investigar q" +
-                "uem alterou cada registro", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("pt-BR"), "Features", "Consulta da trilha de auditoria", "  Como administrador\r\n  Quero rastrear alterações da aplicação\r\n  Para investigar" +
+                " quem alterou cada registro", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

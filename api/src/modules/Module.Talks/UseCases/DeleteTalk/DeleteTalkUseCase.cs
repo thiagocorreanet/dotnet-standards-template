@@ -5,7 +5,7 @@ using Module.Talks.Domain;
 using Module.Talks.Shared;
 using Shared.Data.Extensions;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Talks.UseCases.DeleteTalk;
 

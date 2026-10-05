@@ -1,4 +1,4 @@
-namespace Shared.Http.Results;
+namespace Shared.Kernel.Results;
 
 public enum ErrorType
 {

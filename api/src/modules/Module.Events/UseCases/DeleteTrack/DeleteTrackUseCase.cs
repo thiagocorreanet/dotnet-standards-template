@@ -5,7 +5,7 @@ using Module.Events.Domain;
 using Module.Events.Shared;
 using Shared.Data.Extensions;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 namespace Module.Events.UseCases.DeleteTrack;
 [Command("event-management-example")]
 internal sealed class DeleteTrackUseCase(EventsDbContext db, ITalksModuleApi talks, ILogger<DeleteTrackUseCase> logger) : IUseCase<DeleteTrackRequest, DeleteTrackResponse>

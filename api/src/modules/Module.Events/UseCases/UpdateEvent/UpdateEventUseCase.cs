@@ -6,7 +6,7 @@ using Module.Events.Shared;
 using Shared.Contracts.Venues;
 using Shared.Data.Extensions;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Events.UseCases.UpdateEvent;
 

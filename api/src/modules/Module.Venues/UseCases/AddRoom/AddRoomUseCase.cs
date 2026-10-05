@@ -4,7 +4,7 @@ using Module.Venues.Domain;
 using Module.Venues.Shared;
 using Shared.Data.Extensions;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Venues.UseCases.AddRoom;
 

@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
 using Shared.Data.Outbox;
 using Shared.Data.Transactions;
 

@@ -6,7 +6,7 @@ using Shared.Contracts.Events;
 using Shared.Contracts.Venues;
 using Shared.Contracts.People;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Talks.UseCases.GetTalk;
 

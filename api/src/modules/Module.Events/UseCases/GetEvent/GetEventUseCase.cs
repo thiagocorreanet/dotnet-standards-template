@@ -4,7 +4,7 @@ using Module.Events.Domain;
 using Module.Events.Shared;
 using Shared.Contracts.Venues;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Events.UseCases.GetEvent;
 

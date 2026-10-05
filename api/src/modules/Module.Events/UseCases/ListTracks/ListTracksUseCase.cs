@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Module.Events.Domain;
 using Module.Events.Shared;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 namespace Module.Events.UseCases.ListTracks;
 internal sealed class ListTracksUseCase(EventsDbContext db, ILogger<ListTracksUseCase> logger) : IUseCase<ListTracksRequest, IReadOnlyList<ListTracksItemResponse>>
 {

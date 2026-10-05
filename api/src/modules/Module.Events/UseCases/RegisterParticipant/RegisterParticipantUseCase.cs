@@ -7,7 +7,7 @@ using Shared.Contracts.Venues;
 using Shared.Contracts.People;
 using Shared.Data.Extensions;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Events.UseCases.RegisterParticipant;
 

@@ -24,8 +24,8 @@ namespace Tests.Functional.Features
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("pt-BR"), "Features", "Gestão de pessoas", "  Como administrador\n  Quero cadastrar palestrantes e participantes\n  Para vincul" +
-                "á-los aos eventos e palestras", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("pt-BR"), "Features", "Gestão de pessoas", "  Como administrador\r\n  Quero cadastrar palestrantes e participantes\r\n  Para vinc" +
+                "ulá-los aos eventos e palestras", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         

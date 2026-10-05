@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Shared.Observability.Telemetry;
 
 namespace Shared.Http.Endpoints;

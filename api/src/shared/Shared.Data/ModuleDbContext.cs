@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
 using Shared.Data.Outbox;
 
 namespace Shared.Data;

@@ -291,6 +291,13 @@
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.12, )",
           "Microsoft.Extensions.Options.ConfigurationExtensions": "[10.0.12, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
+          "Shared.Contracts": "[1.0.0, )",
+          "Shared.Kernel": "[1.0.0, )"
+        }
+      },
+      "shared.kernel": {
+        "type": "Project",
+        "dependencies": {
           "Shared.Contracts": "[1.0.0, )"
         }
       },

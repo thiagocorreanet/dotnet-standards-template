@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
 namespace Shared.Data.Migrations;
 /// <summary>Concede privilégios só aos schemas/tabelas dos módulos registrados, nunca CREATE ao runtime.</summary>
 public static class RuntimeDatabasePrivileges

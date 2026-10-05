@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Module.Venues.Domain;
 using Module.Venues.Shared;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.Venues.UseCases.GetVenue;
 

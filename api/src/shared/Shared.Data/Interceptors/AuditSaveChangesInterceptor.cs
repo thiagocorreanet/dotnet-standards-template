@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Shared.Contracts.Audit;
 using Shared.Contracts.Common;
 using Shared.Contracts.Integration;
-using Shared.Data.Entities;
+using Shared.Kernel.Entities;
 using Shared.Data.Outbox;
 using Shared.Data.Transactions;
 

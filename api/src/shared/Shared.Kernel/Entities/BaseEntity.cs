@@ -1,6 +1,6 @@
 using Shared.Contracts.Integration;
 
-namespace Shared.Data.Entities;
+namespace Shared.Kernel.Entities;
 
 /// <summary>
 /// Base de todas as entidades principais: PK Guid v7 (ordenável, amigável a índices B-tree),

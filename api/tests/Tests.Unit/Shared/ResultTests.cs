@@ -1,4 +1,4 @@
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 using Shouldly;
 
 namespace Tests.Unit.Shared;

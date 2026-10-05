@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Module.People.Domain;
 using Module.People.Shared;
 using Shared.Http.Endpoints;
-using Shared.Http.Results;
+using Shared.Kernel.Results;
 
 namespace Module.People.UseCases.GetPerson;
 
