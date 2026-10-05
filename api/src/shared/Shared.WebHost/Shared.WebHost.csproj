@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Shared.WebHost</RootNamespace>
+    <Description>Pipeline HTTP, autenticação OIDC, descoberta de módulos, health checks e OpenAPI/Scalar.</Description>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Tests.Unit" />

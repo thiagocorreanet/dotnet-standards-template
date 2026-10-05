@@ -7,7 +7,7 @@ using Module.People.UseCases.ListPeople;
 using Module.People.UseCases.UpdatePerson;
 using Shared.Contracts.Common;
 using Shouldly;
-using Tests.Unit.Shared;
+using Tests.Unit.Support;
 
 namespace Tests.Unit.People;
 

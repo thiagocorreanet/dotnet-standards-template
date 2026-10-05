@@ -41,7 +41,11 @@ services:
       backend:
         aliases: [identity.localhost]
   migrate:
-    build: { context: ./api, dockerfile: src/hosts/Host.Api/Dockerfile }
+    build:
+      context: ./api
+      dockerfile: src/hosts/Host.Api/Dockerfile
+      # Só usados no projeto gerado, para baixar os pacotes ModularApi.* do feed privado; ausentes, o build segue sem eles.
+      secrets: [modularapi_feed_user, modularapi_feed_token]
     image: ${COMPOSE_PROJECT_NAME:-modular-api-local}:local
     command: ["migrate"]
     environment: &api-environment
@@ -54,7 +58,7 @@ services:
       AllowedHosts: "localhost;127.0.0.1;api"
     secrets:
       - source: migrator-db
-        target: ConnectionStrings__ModularApi
+        target: ConnectionStrings__Database
     depends_on:
       postgres: { condition: service_healthy }
     networks: [backend]
@@ -69,7 +73,7 @@ services:
       Bootstrap__Email: developer@example.test
     secrets:
       - source: runtime-db
-        target: ConnectionStrings__ModularApi
+        target: ConnectionStrings__Database
     depends_on:
       migrate: { condition: service_completed_successfully }
     networks: [backend]
@@ -84,7 +88,7 @@ services:
     ports: ["127.0.0.1:5761:8080"]
     secrets:
       - source: runtime-db
-        target: ConnectionStrings__ModularApi
+        target: ConnectionStrings__Database
     depends_on:
       migrate: { condition: service_completed_successfully }
       keycloak: { condition: service_started }
@@ -99,5 +103,7 @@ networks:
 volumes:
   postgres-data: {}
 secrets:
+  modularapi_feed_user: { environment: MODULARAPI_FEED_USER }
+  modularapi_feed_token: { environment: MODULARAPI_FEED_TOKEN }
   runtime-db: { file: ./.local/runtime-db }
   migrator-db: { file: ./.local/migrator-db }

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Shared.Observability</RootNamespace>
+    <Description>Serilog e OpenTelemetry com sanitização de logs e traces e telemetria por módulo.</Description>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

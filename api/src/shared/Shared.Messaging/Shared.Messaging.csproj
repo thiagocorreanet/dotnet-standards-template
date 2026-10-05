@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Shared.Messaging</RootNamespace>
+    <Description>Processador da Outbox, publicação in-process com Inbox por consumidor e sonda de saúde da fila.</Description>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Tests.Unit" />

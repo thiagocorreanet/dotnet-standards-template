@@ -7,6 +7,7 @@ on:
     - cron: '20 5 * * 1'
 permissions:
   contents: read
+  packages: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -14,6 +15,11 @@ jobs:
   dotnet:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    # No projeto gerado, api/nuget.config lê estas variáveis para baixar os pacotes ModularApi.* do GitHub Packages.
+    # O pacote precisa conceder leitura a este repositório (Package settings > Manage Actions access).
+    env:
+      MODULARAPI_FEED_USER: ${{ github.actor }}
+      MODULARAPI_FEED_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
@@ -41,7 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: { persist-credentials: false }
-      - run: docker build -f api/src/hosts/Host.Api/Dockerfile -t modular-api:ci api
+      - run: docker build --secret id=modularapi_feed_user,env=MODULARAPI_FEED_USER --secret id=modularapi_feed_token,env=MODULARAPI_FEED_TOKEN -f api/src/hosts/Host.Api/Dockerfile -t modular-api:ci api
+        env:
+          MODULARAPI_FEED_USER: ${{ github.actor }}
+          MODULARAPI_FEED_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           mkdir -p artifacts/security
           docker save modular-api:ci -o artifacts/security/api.tar

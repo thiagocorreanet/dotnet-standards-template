@@ -1,7 +1,7 @@
 using Module.Audit.UseCases.GetAuditRecord;
 using Module.Audit.UseCases.ListAuditRecords;
 using Shouldly;
-using Tests.Unit.Shared;
+using Tests.Unit.Support;
 
 namespace Tests.Unit.Audit;
 

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>Shared.Http</RootNamespace>
+    <Description>Casos de uso, IAccessPolicy, decoração transacional com advisory lock, validação e Result para ProblemDetails.</Description>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Tests.Unit" />

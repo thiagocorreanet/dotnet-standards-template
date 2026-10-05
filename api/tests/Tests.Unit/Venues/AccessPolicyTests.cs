@@ -9,7 +9,7 @@ using Module.Venues.UseCases.ListVenues;
 using Module.Venues.UseCases.UpdateRoom;
 using Module.Venues.UseCases.UpdateVenue;
 using Shouldly;
-using Tests.Unit.Shared;
+using Tests.Unit.Support;
 
 namespace Tests.Unit.Venues;
 

@@ -9,6 +9,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <SharedReference Include="Shared.Contracts" />
+    <SharedReference Include="Contracts" />
   </ItemGroup>
 </Project>

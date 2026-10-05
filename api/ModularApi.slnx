@@ -8,14 +8,17 @@
     <Project Path="src/modules/Module.Identity/Module.Identity.csproj" />
   </Folder>
   <Folder Name="/src/shared/">
-    <Project Path="src/shared/Shared.Contracts/Shared.Contracts.csproj" />
     <Project Path="src/shared/Shared.Contracts.Modules/Shared.Contracts.Modules.csproj" />
+    <!-- No projeto gerado, estas bibliotecas chegam como pacotes ModularApi.* (o bloco abaixo sai na geração). -->
+    <!--#if (sourceRepository) -->
+    <Project Path="src/shared/Shared.Contracts/Shared.Contracts.csproj" />
     <Project Path="src/shared/Shared.Data/Shared.Data.csproj" />
     <Project Path="src/shared/Shared.Http/Shared.Http.csproj" />
     <Project Path="src/shared/Shared.Kernel/Shared.Kernel.csproj" />
     <Project Path="src/shared/Shared.Messaging/Shared.Messaging.csproj" />
     <Project Path="src/shared/Shared.Observability/Shared.Observability.csproj" />
     <Project Path="src/shared/Shared.WebHost/Shared.WebHost.csproj" />
+    <!--#endif -->
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Tests.Architecture/Tests.Architecture.csproj" />

@@ -28,6 +28,29 @@
       "type": "computed",
       "value": "false",
       "description": "Verdadeiro só no repositório de origem: blocos <!--#if (sourceRepository) --> em Markdown saem do projeto gerado."
+    },
+    "sharedPackages": {
+      "type": "generated",
+      "generator": "constant",
+      "parameters": {
+        "value": "true"
+      },
+      "replaces": "false<!--sharedPackages-->",
+      "description": "O projeto gerado consome as bibliotecas Shared.* como pacotes ModularApi.*."
+    },
+    "packageFeed": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "https://nuget.pkg.github.com/thiagocorreanet/index.json",
+      "replaces": "MODULARAPI_FEED_URL",
+      "description": "URL (ou pasta) do feed com os pacotes ModularApi.*; gravada em api/nuget.config."
+    },
+    "sharedPackagesVersion": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "1.0.0",
+      "replaces": "1.0.0<!--sharedPackagesVersion-->",
+      "description": "Versão dos pacotes ModularApi.* gravada em Directory.Packages.props."
     }
   },
   "sources": [
@@ -38,6 +61,7 @@
         "**/bin/**",
         "**/obj/**",
         "**/TestResults/**",
+        "**/packages.lock.json",
         ".git/**",
         ".env",
         "**/*.feature.cs",
@@ -52,7 +76,21 @@
         ".local/**",
         ".secrets/**",
         ".env.*",
-        "**/*.log"
+        "**/*.log",
+        "api/src/shared/Directory.Build.props",
+        "api/src/shared/Shared.Kernel/**",
+        "api/src/shared/Shared.Contracts/**",
+        "api/src/shared/Shared.Data/**",
+        "api/src/shared/Shared.Http/**",
+        "api/src/shared/Shared.Messaging/**",
+        "api/src/shared/Shared.Observability/**",
+        "api/src/shared/Shared.WebHost/**",
+        "CHANGELOG.md",
+        ".github/workflows/release-packages.yml",
+        "scripts/pack-shared.mjs",
+        "api/tests/Tests.Unit/Shared/**",
+        "api/tests/Tests.Integration/Reliability/InboxTests.cs",
+        "api/tests/Tests.Integration/Reliability/ConsistencyKeyLockTests.cs"
       ],
       "modifiers": [
         {
@@ -62,10 +100,10 @@
             "api/src/modules/Module.Talks/**",
             "api/src/modules/Module.People/**",
             "api/src/modules/Module.Venues/**",
-            "api/src/shared/Shared.Contracts/Events/**",
-            "api/src/shared/Shared.Contracts/Talks/**",
-            "api/src/shared/Shared.Contracts/People/**",
-            "api/src/shared/Shared.Contracts/Venues/**",
+            "api/src/shared/Shared.Contracts.Modules/Events/**",
+            "api/src/shared/Shared.Contracts.Modules/Talks/**",
+            "api/src/shared/Shared.Contracts.Modules/People/**",
+            "api/src/shared/Shared.Contracts.Modules/Venues/**",
             "api/tests/Tests.Unit/Events/**",
             "api/tests/Tests.Unit/Talks/**",
             "api/tests/Tests.Unit/People/**",
@@ -85,7 +123,10 @@
             "docs/example/**"
           ]
         }
-      ]
+      ],
+      "rename": {
+        "api/nuget.template.config": "api/nuget.config"
+      }
     }
   ],
   "primaryOutputs": [
@@ -95,6 +136,29 @@
   ],
   "SpecialCustomOperations": {
     "**/*.md": {
+      "operations": [
+        {
+          "type": "conditional",
+          "configuration": {
+            "if": [
+              "<!--#if"
+            ],
+            "else": [
+              "<!--#else"
+            ],
+            "elseif": [
+              "<!--#elseif"
+            ],
+            "endif": [
+              "<!--#endif"
+            ],
+            "trim": "true",
+            "wholeLine": "true"
+          }
+        }
+      ]
+    },
+    "**/*.slnx": {
       "operations": [
         {
           "type": "conditional",

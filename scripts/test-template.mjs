@@ -30,11 +30,38 @@ function checkMarkdown(output) {
   }
   if (broken.length) throw new Error('Links Markdown quebrados no projeto gerado:\n' + broken.join('\n'));
 }
+// Pacotes Shared.* num feed em pasta. Versão única por execução: o cache global do NuGet nunca devolve um pacote antigo.
+const packagedVersion = /<VersionPrefix>([^<]+)<\/VersionPrefix>/.exec(readFileSync(resolve(root, 'api/src/shared/Directory.Build.props'), 'utf8'))[1];
+const templateVersion = JSON.parse(readFileSync(resolve(root, '.template.config/template.json'), 'utf8')).symbols.sharedPackagesVersion.defaultValue;
+if (packagedVersion !== templateVersion) throw new Error(`Versão dos pacotes (${packagedVersion}) difere do padrão do template (${templateVersion}).`);
+const feed = resolve(scratch, 'feed');
+const version = packagedVersion + '-templatetest.' + Date.now();
+execFileSync(process.execPath, [resolve(root, 'scripts/pack-shared.mjs'), feed, version], { cwd: root, stdio: 'inherit' });
+const packageArgs = ['--packageFeed', feed, '--sharedPackagesVersion', version];
+const packaged = ['Kernel', 'Contracts', 'Data', 'Http', 'Messaging', 'Observability', 'WebHost'].map(l => 'Shared.' + l);
+function textFiles(dir) {
+  return readdirSync(dir).flatMap(entry => {
+    if (['bin', 'obj', 'node_modules', 'artifacts', '.git'].includes(entry)) return [];
+    const path = resolve(dir, entry);
+    return statSync(path).isDirectory() ? textFiles(path) : /\.(cs|csproj|props|targets|config|json|md|ya?ml|slnx|mjs)$|Dockerfile$/.test(entry) ? [path] : [];
+  });
+}
+function checkPackageConsumption(output, name) {
+  for (const library of packaged)
+    if (existsSync(resolve(output, 'api/src/shared', library))) throw new Error('Biblioteca copiada como código em vez de pacote: ' + library);
+  if (!readFileSync(resolve(output, 'api/Directory.Build.props'), 'utf8').includes('>true</UseSharedPackages>')) throw new Error('UseSharedPackages não ligado no projeto gerado.');
+  if (!readFileSync(resolve(output, 'api/nuget.config'), 'utf8').includes(feed)) throw new Error('nuget.config sem o feed informado.');
+  if (readFileSync(resolve(output, 'api', name + '.slnx'), 'utf8').includes('Shared.Kernel')) throw new Error('Solução gerada ainda lista Shared.Kernel.');
+  // O ID dos pacotes não pode entrar na troca de nome do projeto (sourceName).
+  const leaked = textFiles(output).filter(file => readFileSync(file, 'utf8').includes(name + '.Shared.'));
+  if (leaked.length) throw new Error('Prefixo dos pacotes trocado pelo nome do projeto em: ' + leaked.map(f => relative(output, f)).join(', '));
+}
 run(['new', 'install', root, '--debug:custom-hive', hive]);
 for (const example of [false, true]) {
   const name = example ? 'ExampleProof' : 'CoreProof';
   const output = resolve(scratch, name);
-  run(['new', 'modular-api', '-n', name, '-o', output, '--includeExample', String(example), '--debug:custom-hive', hive]);
+  run(['new', 'modular-api', '-n', name, '-o', output, '--includeExample', String(example), ...packageArgs, '--debug:custom-hive', hive]);
+  checkPackageConsumption(output, name);
   for (const forbidden of ['.env', '.local', '.secrets', 'artifacts']) if (existsSync(resolve(output, forbidden))) throw new Error('Artefato privado exportado: ' + forbidden);
   for (const history of ['docs/implementation-status.md', 'docs/technical-review.md', 'docs/corrections-review.md', 'docs/architecture-review.md', 'docs/reference'])
     if (existsSync(resolve(output, history))) throw new Error('Histórico do repositório de origem exportado: ' + history);
@@ -50,7 +77,7 @@ for (const example of [false, true]) {
 // Geradores: projeto núcleo + módulo + um comando e uma consulta, sem nenhuma edição manual.
 const generated = resolve(scratch, 'GeneratorProof');
 const generatedApi = resolve(generated, 'api');
-run(['new', 'modular-api', '-n', 'GeneratorProof', '-o', generated, '--debug:custom-hive', hive]);
+run(['new', 'modular-api', '-n', 'GeneratorProof', '-o', generated, ...packageArgs, '--debug:custom-hive', hive]);
 run(['new', 'modular-module', '-n', 'InvoiceManagement', '--debug:custom-hive', hive], generatedApi);
 run(['new', 'modular-usecase', '-n', 'CreateInvoice', '--module', 'InvoiceManagement', '--command', '--debug:custom-hive', hive], generatedApi);
 run(['new', 'modular-usecase', '-n', 'GetInvoice', '--module', 'InvoiceManagement', '--debug:custom-hive', hive], generatedApi);
@@ -65,4 +92,4 @@ const build = execFileSync('dotnet', ['build', 'GeneratorProof.slnx', '--no-rest
 const generatedWarnings = build.split('\n').filter(line => /warning/.test(line) && /InvoiceManagement/.test(line));
 if (generatedWarnings.length) throw new Error('Código gerado com avisos:\n' + [...new Set(generatedWarnings)].join('\n'));
 run(['test', 'GeneratorProof.slnx', '--no-build', '--nologo', '--verbosity', 'quiet', '-clp:ErrorsOnly'], generatedApi);
-console.log('PASS: template genérico, exemplo e geradores. Diretório isolado preservado para inspeção: ' + scratch);
+console.log('PASS: template genérico, exemplo e geradores, consumindo pacotes ' + version + '. Diretório isolado preservado para inspeção: ' + scratch);

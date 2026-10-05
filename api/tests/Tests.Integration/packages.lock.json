@@ -759,106 +759,28 @@
       "host.api": {
         "type": "Project",
         "dependencies": {
+          "ModularApi.Shared.WebHost": "[1.0.0, )",
           "Module.Audit": "[1.0.0, )",
           "Module.Events": "[1.0.0, )",
           "Module.Identity": "[1.0.0, )",
           "Module.People": "[1.0.0, )",
           "Module.Talks": "[1.0.0, )",
-          "Module.Venues": "[1.0.0, )",
-          "Shared.WebHost": "[1.0.0, )"
+          "Module.Venues": "[1.0.0, )"
         }
       },
-      "module.audit": {
-        "type": "Project",
-        "dependencies": {
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Contracts.Modules": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Http": "[1.0.0, )",
-          "Shared.Kernel": "[1.0.0, )",
-          "Shared.Messaging": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )",
-          "Shared.WebHost": "[1.0.0, )"
-        }
-      },
-      "module.events": {
-        "type": "Project",
-        "dependencies": {
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Contracts.Modules": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Http": "[1.0.0, )",
-          "Shared.Kernel": "[1.0.0, )",
-          "Shared.Messaging": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )",
-          "Shared.WebHost": "[1.0.0, )"
-        }
-      },
-      "module.identity": {
-        "type": "Project",
-        "dependencies": {
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Contracts.Modules": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Http": "[1.0.0, )",
-          "Shared.Kernel": "[1.0.0, )",
-          "Shared.Messaging": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )",
-          "Shared.WebHost": "[1.0.0, )"
-        }
-      },
-      "module.people": {
-        "type": "Project",
-        "dependencies": {
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Contracts.Modules": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Http": "[1.0.0, )",
-          "Shared.Kernel": "[1.0.0, )",
-          "Shared.Messaging": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )",
-          "Shared.WebHost": "[1.0.0, )"
-        }
-      },
-      "module.talks": {
-        "type": "Project",
-        "dependencies": {
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Contracts.Modules": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Http": "[1.0.0, )",
-          "Shared.Kernel": "[1.0.0, )",
-          "Shared.Messaging": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )",
-          "Shared.WebHost": "[1.0.0, )"
-        }
-      },
-      "module.venues": {
-        "type": "Project",
-        "dependencies": {
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Contracts.Modules": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Http": "[1.0.0, )",
-          "Shared.Kernel": "[1.0.0, )",
-          "Shared.Messaging": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )",
-          "Shared.WebHost": "[1.0.0, )"
-        }
-      },
-      "shared.contracts": {
+      "ModularApi.Shared.Contracts": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.12, )"
         }
       },
-      "shared.contracts.modules": {
+      "ModularApi.Shared.Contracts.Modules": {
         "type": "Project",
         "dependencies": {
-          "Shared.Contracts": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )"
         }
       },
-      "shared.data": {
+      "ModularApi.Shared.Data": {
         "type": "Project",
         "dependencies": {
           "Microsoft.EntityFrameworkCore": "[10.0.12, )",
@@ -866,36 +788,36 @@
           "Microsoft.Extensions.Configuration.Binder": "[10.0.12, )",
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.12, )",
           "Microsoft.Extensions.Options.ConfigurationExtensions": "[10.0.12, )",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Kernel": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )"
         }
       },
-      "shared.http": {
+      "ModularApi.Shared.Http": {
         "type": "Project",
         "dependencies": {
           "FluentValidation": "[12.1.1, )",
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )"
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )"
         }
       },
-      "shared.kernel": {
+      "ModularApi.Shared.Kernel": {
         "type": "Project",
         "dependencies": {
-          "Shared.Contracts": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )"
         }
       },
-      "shared.messaging": {
+      "ModularApi.Shared.Messaging": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.12, )",
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )"
         }
       },
-      "shared.observability": {
+      "ModularApi.Shared.Observability": {
         "type": "Project",
         "dependencies": {
           "Npgsql.OpenTelemetry": "[10.0.3, )",
@@ -910,18 +832,96 @@
           "Serilog.Sinks.OpenTelemetry": "[4.2.0, )"
         }
       },
-      "shared.webhost": {
+      "ModularApi.Shared.WebHost": {
         "type": "Project",
         "dependencies": {
           "AspNetCore.HealthChecks.NpgSql": "[9.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.12, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.12, )",
-          "Scalar.AspNetCore": "[2.17.6, )",
-          "Shared.Contracts": "[1.0.0, )",
-          "Shared.Data": "[1.0.0, )",
-          "Shared.Http": "[1.0.0, )",
-          "Shared.Messaging": "[1.0.0, )",
-          "Shared.Observability": "[1.0.0, )"
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Http": "[1.0.0, )",
+          "ModularApi.Shared.Messaging": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )",
+          "Scalar.AspNetCore": "[2.17.6, )"
+        }
+      },
+      "module.audit": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Contracts.Modules": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Http": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "ModularApi.Shared.Messaging": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )",
+          "ModularApi.Shared.WebHost": "[1.0.0, )"
+        }
+      },
+      "module.events": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Contracts.Modules": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Http": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "ModularApi.Shared.Messaging": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )",
+          "ModularApi.Shared.WebHost": "[1.0.0, )"
+        }
+      },
+      "module.identity": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Contracts.Modules": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Http": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "ModularApi.Shared.Messaging": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )",
+          "ModularApi.Shared.WebHost": "[1.0.0, )"
+        }
+      },
+      "module.people": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Contracts.Modules": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Http": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "ModularApi.Shared.Messaging": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )",
+          "ModularApi.Shared.WebHost": "[1.0.0, )"
+        }
+      },
+      "module.talks": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Contracts.Modules": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Http": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "ModularApi.Shared.Messaging": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )",
+          "ModularApi.Shared.WebHost": "[1.0.0, )"
+        }
+      },
+      "module.venues": {
+        "type": "Project",
+        "dependencies": {
+          "ModularApi.Shared.Contracts": "[1.0.0, )",
+          "ModularApi.Shared.Contracts.Modules": "[1.0.0, )",
+          "ModularApi.Shared.Data": "[1.0.0, )",
+          "ModularApi.Shared.Http": "[1.0.0, )",
+          "ModularApi.Shared.Kernel": "[1.0.0, )",
+          "ModularApi.Shared.Messaging": "[1.0.0, )",
+          "ModularApi.Shared.Observability": "[1.0.0, )",
+          "ModularApi.Shared.WebHost": "[1.0.0, )"
         }
       },
       "AspNetCore.HealthChecks.NpgSql": {

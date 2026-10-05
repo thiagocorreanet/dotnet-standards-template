@@ -8,13 +8,13 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <SharedReference Include="Shared.Contracts" />
-    <SharedReference Include="Shared.Data" />
-    <SharedReference Include="Shared.Kernel" />
-    <SharedReference Include="Shared.Http" />
-    <SharedReference Include="Shared.Observability" />
-    <SharedReference Include="Shared.Messaging" />
-    <SharedReference Include="Shared.WebHost" />
+    <SharedReference Include="Contracts" />
+    <SharedReference Include="Data" />
+    <SharedReference Include="Kernel" />
+    <SharedReference Include="Http" />
+    <SharedReference Include="Observability" />
+    <SharedReference Include="Messaging" />
+    <SharedReference Include="WebHost" />
     <ProjectReference Include="../../shared/Shared.Contracts.Modules/Shared.Contracts.Modules.csproj" />
   </ItemGroup>
   <ItemGroup>

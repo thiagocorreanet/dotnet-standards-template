@@ -2,7 +2,7 @@ using NSubstitute;
 using Shared.Contracts.Common;
 using Shared.Contracts.Identity;
 
-namespace Tests.Unit.Shared;
+namespace Tests.Unit.Support;
 
 /// <summary>Usuários correntes para testar policies sem pipeline HTTP.</summary>
 internal static class TestUsers

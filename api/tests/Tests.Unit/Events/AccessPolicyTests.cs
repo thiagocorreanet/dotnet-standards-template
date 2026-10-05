@@ -18,7 +18,7 @@ using NSubstitute;
 using Shared.Contracts.Common;
 using Shared.Contracts.People;
 using Shouldly;
-using Tests.Unit.Shared;
+using Tests.Unit.Support;
 
 namespace Tests.Unit.Events;
 

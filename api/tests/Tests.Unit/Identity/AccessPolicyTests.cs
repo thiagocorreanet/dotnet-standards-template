@@ -3,7 +3,7 @@ using Module.Identity.UseCases.ListUsers;
 using Module.Identity.UseCases.RegisterUser;
 using Module.Identity.UseCases.UpdateUserAccess;
 using Shouldly;
-using Tests.Unit.Shared;
+using Tests.Unit.Support;
 
 namespace Tests.Unit.Identity;
 

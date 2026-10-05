@@ -3,7 +3,8 @@
     <IncludeExample Condition="'$(IncludeExample)' == ''">true<!--includeExample--></IncludeExample>
     <!-- Shared.* (item SharedReference): projetos neste repositório; pacotes $(SharedPackagePrefix)* no projeto gerado. -->
     <UseSharedPackages Condition="'$(UseSharedPackages)' == ''">false<!--sharedPackages--></UseSharedPackages>
-    <SharedPackagePrefix>ModularApi.</SharedPackagePrefix>
+    <!-- &#65; é "A": o literal fica fora da troca de nome do template, e o prefixo dos pacotes não muda no projeto gerado. -->
+    <SharedPackagePrefix>Modular&#65;pi.Shared.</SharedPackagePrefix>
     <!-- Só as bibliotecas de src/shared são empacotadas (ver src/shared/Directory.Build.props). -->
     <IsPackable>false</IsPackable>
     <TargetFramework>net10.0</TargetFramework>
