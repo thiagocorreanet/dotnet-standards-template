@@ -11,7 +11,7 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="NSubstitute" />
-    <ProjectReference Include="../../src/shared/Shared.Http/Shared.Http.csproj" />
+    <SharedReference Include="Shared.Http" />
     <ProjectReference Include="../../src/modules/Module.Venues/Module.Venues.csproj" Condition="'$(IncludeExample)' == 'true'" />
     <ProjectReference Include="../../src/modules/Module.People/Module.People.csproj" Condition="'$(IncludeExample)' == 'true'" />
     <ProjectReference Include="../../src/modules/Module.Audit/Module.Audit.csproj" />

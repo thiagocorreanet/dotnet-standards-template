@@ -1,6 +1,11 @@
 <Project>
   <PropertyGroup>
     <IncludeExample Condition="'$(IncludeExample)' == ''">true<!--includeExample--></IncludeExample>
+    <!-- Shared.* (item SharedReference): projetos neste repositório; pacotes $(SharedPackagePrefix)* no projeto gerado. -->
+    <UseSharedPackages Condition="'$(UseSharedPackages)' == ''">false<!--sharedPackages--></UseSharedPackages>
+    <SharedPackagePrefix>ModularApi.</SharedPackagePrefix>
+    <!-- Só as bibliotecas de src/shared são empacotadas (ver src/shared/Directory.Build.props). -->
+    <IsPackable>false</IsPackable>
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>

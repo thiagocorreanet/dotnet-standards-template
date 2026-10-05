@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    SharedReference: dependência de uma biblioteca Shared.*. No repositório do template vira ProjectReference; no projeto
+    gerado (UseSharedPackages=true) vira PackageReference $(SharedPackagePrefix)<Nome>, com versão em Directory.Packages.props.
+  -->
+  <ItemGroup Condition="'$(UseSharedPackages)' != 'true'">
+    <ProjectReference Include="@(SharedReference->'$(MSBuildThisFileDirectory)src/shared/%(Identity)/%(Identity).csproj')" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseSharedPackages)' == 'true'">
+    <PackageReference Include="@(SharedReference->'$(SharedPackagePrefix)%(Identity)')" />
+  </ItemGroup>
+</Project>

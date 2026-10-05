@@ -8,13 +8,14 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <ProjectReference Include="../../shared/Shared.Contracts/Shared.Contracts.csproj" />
-    <ProjectReference Include="../../shared/Shared.Data/Shared.Data.csproj" />
-    <ProjectReference Include="../../shared/Shared.Kernel/Shared.Kernel.csproj" />
-    <ProjectReference Include="../../shared/Shared.Http/Shared.Http.csproj" />
-    <ProjectReference Include="../../shared/Shared.Observability/Shared.Observability.csproj" />
-    <ProjectReference Include="../../shared/Shared.Messaging/Shared.Messaging.csproj" />
-    <ProjectReference Include="../../shared/Shared.WebHost/Shared.WebHost.csproj" />
+    <SharedReference Include="Shared.Contracts" />
+    <SharedReference Include="Shared.Data" />
+    <SharedReference Include="Shared.Kernel" />
+    <SharedReference Include="Shared.Http" />
+    <SharedReference Include="Shared.Observability" />
+    <SharedReference Include="Shared.Messaging" />
+    <SharedReference Include="Shared.WebHost" />
+    <ProjectReference Include="../../shared/Shared.Contracts.Modules/Shared.Contracts.Modules.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Tests.Unit" />

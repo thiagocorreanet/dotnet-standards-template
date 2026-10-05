@@ -360,6 +360,7 @@
         "type": "Project",
         "dependencies": {
           "Shared.Contracts": "[1.0.0, )",
+          "Shared.Contracts.Modules": "[1.0.0, )",
           "Shared.Data": "[1.0.0, )",
           "Shared.Http": "[1.0.0, )",
           "Shared.Kernel": "[1.0.0, )",
@@ -372,6 +373,7 @@
         "type": "Project",
         "dependencies": {
           "Shared.Contracts": "[1.0.0, )",
+          "Shared.Contracts.Modules": "[1.0.0, )",
           "Shared.Data": "[1.0.0, )",
           "Shared.Http": "[1.0.0, )",
           "Shared.Kernel": "[1.0.0, )",
@@ -384,6 +386,7 @@
         "type": "Project",
         "dependencies": {
           "Shared.Contracts": "[1.0.0, )",
+          "Shared.Contracts.Modules": "[1.0.0, )",
           "Shared.Data": "[1.0.0, )",
           "Shared.Http": "[1.0.0, )",
           "Shared.Kernel": "[1.0.0, )",
@@ -396,6 +399,7 @@
         "type": "Project",
         "dependencies": {
           "Shared.Contracts": "[1.0.0, )",
+          "Shared.Contracts.Modules": "[1.0.0, )",
           "Shared.Data": "[1.0.0, )",
           "Shared.Http": "[1.0.0, )",
           "Shared.Kernel": "[1.0.0, )",
@@ -408,6 +412,7 @@
         "type": "Project",
         "dependencies": {
           "Shared.Contracts": "[1.0.0, )",
+          "Shared.Contracts.Modules": "[1.0.0, )",
           "Shared.Data": "[1.0.0, )",
           "Shared.Http": "[1.0.0, )",
           "Shared.Kernel": "[1.0.0, )",
@@ -420,6 +425,7 @@
         "type": "Project",
         "dependencies": {
           "Shared.Contracts": "[1.0.0, )",
+          "Shared.Contracts.Modules": "[1.0.0, )",
           "Shared.Data": "[1.0.0, )",
           "Shared.Http": "[1.0.0, )",
           "Shared.Kernel": "[1.0.0, )",
@@ -430,6 +436,12 @@
       },
       "shared.contracts": {
         "type": "Project"
+      },
+      "shared.contracts.modules": {
+        "type": "Project",
+        "dependencies": {
+          "Shared.Contracts": "[1.0.0, )"
+        }
       },
       "shared.data": {
         "type": "Project",

@@ -359,6 +359,12 @@
       "shared.contracts": {
         "type": "Project"
       },
+      "shared.contracts.modules": {
+        "type": "Project",
+        "dependencies": {
+          "Shared.Contracts": "[1.0.0, )"
+        }
+      },
       "shared.data": {
         "type": "Project",
         "dependencies": {

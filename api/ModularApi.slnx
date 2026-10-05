@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/Shared.Contracts/Shared.Contracts.csproj" />
+    <Project Path="src/shared/Shared.Contracts.Modules/Shared.Contracts.Modules.csproj" />
     <Project Path="src/shared/Shared.Data/Shared.Data.csproj" />
     <Project Path="src/shared/Shared.Http/Shared.Http.csproj" />
     <Project Path="src/shared/Shared.Kernel/Shared.Kernel.csproj" />
