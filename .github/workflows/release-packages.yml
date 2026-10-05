@@ -1,0 +1,62 @@
+name: release-packages
+# Publica as bibliotecas Shared.* da base no GitHub Packages. Só manual: nada é publicado por push, tag ou agenda.
+# O job publish usa o environment "packages", que precisa de revisor obrigatório configurado em
+# Settings > Environments; sem essa regra, o GitHub não pede aprovação.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Versão SemVer, igual à VersionPrefix de api/src/shared/Directory.Build.props
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: release-packages
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with: { global-json-file: api/global.json }
+      - name: Confere versão e CHANGELOG
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "Versão fora do SemVer"; exit 1; }
+          grep -q "<VersionPrefix>${VERSION%%-*}</VersionPrefix>" api/src/shared/Directory.Build.props || { echo "VersionPrefix difere"; exit 1; }
+          grep -q "^## \[${VERSION}\]" CHANGELOG.md || { echo "CHANGELOG sem a seção da versão"; exit 1; }
+      - run: dotnet restore api/ModularApi.slnx --locked-mode
+      - run: dotnet test api/ModularApi.slnx --no-restore --nologo -clp:ErrorsOnly
+      - run: node scripts/test-template.mjs
+      - run: node scripts/pack-shared.mjs artifacts/packages "$VERSION"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: packages-${{ inputs.version }}
+          path: artifacts/packages/*.nupkg
+          retention-days: 30
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: packages
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      # Reempacota o mesmo commit depois da aprovação (build determinístico), sem depender de baixar o artifact.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with: { global-json-file: api/global.json }
+      - run: dotnet restore api/ModularApi.slnx --locked-mode
+      - run: node scripts/pack-shared.mjs artifacts/packages "$VERSION"
+      # Sem --skip-duplicate: versão publicada é imutável; republicar a mesma versão precisa falhar.
+      - run: dotnet nuget push "artifacts/packages/*.nupkg" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key "$NUGET_TOKEN"
+        env:
+          NUGET_TOKEN: ${{ secrets.GITHUB_TOKEN }}

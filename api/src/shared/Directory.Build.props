@@ -13,8 +13,8 @@
     <!-- SourceLink vem no SDK: URL do repositório e fontes no PDB, para depurar o pacote no projeto consumidor. -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- PDB dentro do .nupkg: o GitHub Packages não aceita pacote de símbolos (.snupkg). -->
+    <DebugType>embedded</DebugType>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 </Project>
