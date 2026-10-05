@@ -92,11 +92,7 @@ Um método deve ter propósito reconhecível e nível de abstração compreensí
 Use guard clauses para reduzir aninhamento. Num caso de uso, o padrão é: verificar, retornar erro cedo, seguir.
 
 ```csharp
-if (emailInUse)
-{
-    logger.LogInformation("Criação de pessoa rejeitada porque o e-mail normalizado já está cadastrado");
-    return PeopleErrors.EmailAlreadyRegistered;
-}
+if (emailInUse) return PeopleErrors.EmailAlreadyRegistered;
 ```
 
 Parâmetros tornam dependências visíveis. Agrupe quando formarem um conceito real (`PagedRequest`); não transforme locais em campos só para encurtar assinatura — num caso de uso isso cria dependência de ordem e atrapalha a reexecução.
@@ -440,10 +436,20 @@ Não há cliente HTTP externo nesta base, e isso é deliberado. Ao introduzir um
 
 Agrupe configuração relacionada em options tipadas e valide na inicialização com `ValidateOnStart` quando a aplicação não puder funcionar com valor inválido. Em variável de ambiente, `Outbox__BatchSize` representa `Outbox:BatchSize`. Não espalhe leitura de configuração dentro de regra.
 
+**Caso de uso, em regra, não loga.** O `TelemetryUseCaseDecorator` já registra, para todo caso de uso, a entrada (com o contexto permitido do request), o sucesso com duração, a rejeição com `ErrorCode`/`ErrorType`, o cancelamento e a exceção. Repetir isso no caso de uso só gera ruído e custo de armazenamento.
+
+| Situação | Logar no caso de uso? |
+|---|---|
+| Passo do fluxo ("carregado", "chamando agregado", "persistido", contagens) | Não. O trace e o log do decorator cobrem. |
+| Falha de negócio (`return XErrors.Y`) | Não. O decorator registra o código do erro. |
+| Situação anômala que não vira erro: referência de outro módulo ausente, concorrência detectada e resolvida pelo índice único, recuperação | Sim, `LogWarning`. |
+| Decisão de negócio relevante que não aparece no resultado nem na auditoria | Sim, com justificativa na revisão. Raro. |
+
 Logs são estruturados, com template estável, **propriedades em inglês e texto em pt-BR**:
 
 ```csharp
-logger.LogInformation("Pessoa {PersonId} criada", person.Id);
+logger.LogWarning("Concorrência detectada ao inscrever pessoa {PersonId} no evento {EventId}; índice único preservou a regra",
+    request.PersonId, request.EventId);
 logger.LogWarning("Reexecutando operação {OperationId}, tentativa {Attempt}, causa {ErrorType}",
     operationId, attempt, exception.GetType().Name);
 ```

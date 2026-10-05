@@ -117,7 +117,7 @@ internal sealed class CreatePersonAccessPolicy(PeopleDbContext db, ICurrentUser 
 
 // CreatePersonUseCase.cs — escrita: marcada como Command.
 [Command("event-management-example")]
-internal sealed class CreatePersonUseCase(PeopleDbContext db, ICurrentUser user, ILogger<CreatePersonUseCase> logger)
+internal sealed class CreatePersonUseCase(PeopleDbContext db, ICurrentUser user)
     : IUseCase<CreatePersonRequest, CreatePersonResponse>
 {
     public async Task<Result<CreatePersonResponse>> HandleAsync(CreatePersonRequest request, CancellationToken ct)
@@ -166,6 +166,7 @@ Integração e testes funcionais sobem PostgreSQL real por Testcontainers; Docke
 - [ ] Consultas projetam apenas o necessário, têm ordenação estável e usam `TagWith` com constante.
 - [ ] Erro novo tem código estável `Module.Reason` e o `ErrorType` correspondente ao status HTTP desejado.
 - [ ] Nenhum dado pessoal, token ou payload foi para log, métrica, trace ou auditoria.
+- [ ] Caso de uso não narra o fluxo em log: entrada, sucesso, rejeição e duração já vêm do `TelemetryUseCaseDecorator`. Só `LogWarning` para situação anômala que não vira erro.
 - [ ] Evento novo tem `[EventContract]`, consumidor registrado por `AddIntegrationEventHandler` (Inbox) ou com `[SkipInbox]` justificado, e decisão explícita sobre `requiresConsumer`.
 - [ ] Idioma respeitado: identificador em inglês, mensagem e documentação em pt-BR, `README.md` em inglês.
 - [ ] Testes cobrem regra, rejeição de acesso indevido e o risco de concorrência quando existir.

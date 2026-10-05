@@ -10,6 +10,7 @@ Contrato de trabalho completo: `CLAUDE.md`. Guias de apoio: `docs/architecture-p
 - Infraestrutura compartilhada não contém regras, schemas ou nomes dos módulos de exemplo.
 - Keycloak/OIDC é o emissor de tokens; a API autoriza recursos e resolve `(issuer, subject)` para identidade interna.
 - Não registre senhas, tokens, documentos ou payloads pessoais em telemetria/auditoria.
+- Caso de uso não narra o fluxo em log: o `TelemetryUseCaseDecorator` registra entrada, sucesso, rejeição e duração. Só `LogWarning` para situação anômala que não vira erro.
 - Toda escrita de negócio é `[Command]` e entra na fronteira transacional antes de ler/validar invariantes. Sem argumento, a chave é o módulo; `{Propriedade}` trava por recurso; chave fixa coordena um conjunto entre módulos (ADR-009). Retries reexecutam com escopo/DbContext novos e verificam commit indeterminado.
 - Outbox tem entrega pelo menos uma vez, claim token e confirmação condicional. Handlers registrados por `AddIntegrationEventHandler` passam pela Inbox do módulo (idempotência por evento e consumidor, na transação do efeito); opt-out só com `[SkipInbox("justificativa")]`.
 - Casos de uso ficam em `UseCases/<Name>/` (Endpoint, Request, Response, Validator, UseCase e AccessPolicy); domínio em `Domain/`; infraestrutura do módulo em `Shared/`.
