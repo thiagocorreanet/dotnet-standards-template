@@ -43,7 +43,7 @@ public sealed class DatabaseMigrationHostedService(
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        var connectionString = configuration.GetConnectionString("ModularApi") ?? throw new InvalidOperationException("ConnectionStrings:ModularApi não configurada");
+        var connectionString = configuration.GetConnectionString(DataServiceCollectionExtensions.ConnectionStringName) ?? throw new InvalidOperationException("ConnectionStrings:Database não configurada");
         await using var lockConnection = new NpgsqlConnection(connectionString);
         await lockConnection.OpenAsync(cancellationToken);
         await using (var cmd = new NpgsqlCommand($"SELECT pg_advisory_lock({LockKey})", lockConnection))

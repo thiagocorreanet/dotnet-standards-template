@@ -12,7 +12,8 @@ namespace Shared.Data;
 
 public static class DataServiceCollectionExtensions
 {
-    public const string ConnectionStringName = "ModularApi";
+    /// <summary>Chave fixa em todos os projetos (<c>ConnectionStrings:Database</c>); não depende do nome do projeto.</summary>
+    public const string ConnectionStringName = "Database";
 
     /// <summary>Infraestrutura de dados compartilhada (interceptors, registro de contextos, migrador). Chamado uma vez pelo host.</summary>
     public static IHostApplicationBuilder AddSharedData(this IHostApplicationBuilder builder)

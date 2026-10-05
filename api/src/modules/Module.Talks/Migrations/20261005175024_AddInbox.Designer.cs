@@ -129,7 +129,7 @@ namespace Module.Talks.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)")
-                        .HasAnnotation("ModularApi:Sensitive", true);
+                        .HasAnnotation("Shared:Sensitive", true);
 
                     b.Property<Guid>("TalkId")
                         .HasColumnType("uuid");

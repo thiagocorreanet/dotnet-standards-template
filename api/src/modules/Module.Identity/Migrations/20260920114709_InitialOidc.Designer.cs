@@ -50,7 +50,7 @@ namespace Module.Identity.Migrations
                         .IsRequired()
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)")
-                        .HasAnnotation("ModularApi:Sensitive", true);
+                        .HasAnnotation("Shared:Sensitive", true);
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -81,7 +81,7 @@ namespace Module.Identity.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
-                        .HasAnnotation("ModularApi:Sensitive", true);
+                        .HasAnnotation("Shared:Sensitive", true);
 
                     b.HasKey("Id");
 

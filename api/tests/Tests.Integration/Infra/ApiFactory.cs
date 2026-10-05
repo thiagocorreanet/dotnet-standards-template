@@ -30,7 +30,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        builder.UseSetting("ConnectionStrings:ModularApi", ConnectionString);
+        builder.UseSetting("ConnectionStrings:Database", ConnectionString);
         builder.UseSetting("Database:MigrateOnStartup", "true");
         builder.UseSetting("Oidc:Authority", TestIdentityProvider.Issuer);
         builder.UseSetting("Oidc:Audience", TestIdentityProvider.Audience);

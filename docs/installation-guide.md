@@ -83,7 +83,7 @@ cd billing-api
 
 Escolha apenas uma modalidade para a mesma pasta. Para comparar as duas, gere nomes e destinos diferentes.
 
-A solução será `api/BillingApi.slnx`; o serviço será `BillingApi.Api` e a chave da conexão será `ConnectionStrings:BillingApi`. Nomes genéricos como `Host.Api`, `Module.Identity` e `Shared.Data` permanecem. Realm e clients OIDC não são renomeados automaticamente com `-n`.
+A solução será `api/BillingApi.slnx`; o serviço será `BillingApi.Api`. A chave da conexão é sempre `ConnectionStrings:Database` (variável `ConnectionStrings__Database`), porque o código que a lê vem do pacote `Shared.Data`. Nomes genéricos como `Host.Api`, `Module.Identity` e `Shared.Data` permanecem. Realm e clients OIDC não são renomeados automaticamente com `-n`.
 
 ## 5. Restaurar, compilar e executar os testes
 

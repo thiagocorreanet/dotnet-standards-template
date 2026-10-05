@@ -23,7 +23,7 @@ try {
   docker(['run', '-d', '--name', name, '--network', network, '--read-only', '--tmpfs', '/tmp', '--cap-drop', 'ALL',
     '-p', '127.0.0.1::8080', '-e', 'ASPNETCORE_ENVIRONMENT=Production', '-e', 'AllowedHosts=api.example.test',
     '-e', 'Oidc__Authority=https://identity.example.test/realms/probe', '-e', 'Oidc__Audience=modular-api',
-    '-v', root + '/.local/runtime-db:/run/secrets/ConnectionStrings__ModularApi:ro', compose.services.api.image]);
+    '-v', root + '/.local/runtime-db:/run/secrets/ConnectionStrings__Database:ro', compose.services.api.image]);
   created = true;
   const inspect = () => JSON.parse(docker(['inspect', name]))[0];
   const port = inspect().NetworkSettings.Ports['8080/tcp'][0].HostPort;

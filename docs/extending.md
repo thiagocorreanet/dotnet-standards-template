@@ -50,7 +50,7 @@ dotnet tool restore
 dotnet ef migrations add Initial --project src/modules/Module.New --startup-project src/hosts/Host.Api --context NewDbContext --output-dir Migrations
 ```
 
-O factory de design usa `ConnectionStrings__ModularApi`; sem ela, existe apenas um endereço local de design sem senha. Confira a variável antes de executar comandos que acessam banco. Não grave segredos no csproj/appsettings.
+O factory de design usa `ConnectionStrings__Database`; sem ela, existe apenas um endereço local de design sem senha. Confira a variável antes de executar comandos que acessam banco. Não grave segredos no csproj/appsettings.
 
 ## Privacidade e evolução
 
