@@ -37,7 +37,7 @@ if (packagedVersion !== templateVersion) throw new Error(`Versão dos pacotes ($
 const feed = resolve(scratch, 'feed');
 const version = packagedVersion + '-templatetest.' + Date.now();
 execFileSync(process.execPath, [resolve(root, 'scripts/pack-shared.mjs'), feed, version], { cwd: root, stdio: 'inherit' });
-const packageArgs = ['--packageFeed', feed, '--sharedPackagesVersion', version];
+const packageArgs = ['--sharedMode', 'package', '--packageFeed', feed, '--sharedPackagesVersion', version];
 const packaged = ['Kernel', 'Contracts', 'Data', 'Http', 'Messaging', 'Observability', 'WebHost'].map(l => 'Shared.' + l);
 function textFiles(dir) {
   return readdirSync(dir).flatMap(entry => {
@@ -56,6 +56,17 @@ function checkPackageConsumption(output, name) {
   const leaked = textFiles(output).filter(file => readFileSync(file, 'utf8').includes(name + '.Shared.'));
   if (leaked.length) throw new Error('Prefixo dos pacotes trocado pelo nome do projeto em: ' + leaked.map(f => relative(output, f)).join(', '));
 }
+// Modo source (padrão): as bibliotecas e os testes delas viram código do projeto, sem feed nem pacote.
+function checkSourceConsumption(output, name) {
+  for (const library of packaged)
+    if (!existsSync(resolve(output, 'api/src/shared', library, library + '.csproj'))) throw new Error('Biblioteca ausente no modo source: ' + library);
+  if (!existsSync(resolve(output, 'api/tests/Tests.Unit/Shared'))) throw new Error('Testes das bibliotecas ausentes no modo source.');
+  if (!readFileSync(resolve(output, 'api/Directory.Build.props'), 'utf8').includes('>false</UseSharedPackages>')) throw new Error('UseSharedPackages ligado no modo source.');
+  for (const file of ['api/nuget.config', 'api/src/shared/Directory.Build.props', 'docs/upgrading.md'])
+    if (existsSync(resolve(output, file))) throw new Error('Arquivo do modo package exportado no modo source: ' + file);
+  const solution = readFileSync(resolve(output, 'api', name + '.slnx'), 'utf8');
+  for (const library of packaged) if (!solution.includes(library + '.csproj')) throw new Error('Solução gerada sem ' + library);
+}
 run(['new', 'install', root, '--debug:custom-hive', hive]);
 for (const example of [false, true]) {
   const name = example ? 'ExampleProof' : 'CoreProof';
@@ -68,6 +79,19 @@ for (const example of [false, true]) {
   checkMarkdown(output);
   const modules = readdirSync(resolve(output, 'api/src/modules'));
   if (modules.length !== (example ? 6 : 2)) throw new Error('Conjunto de módulos inesperado.');
+  const results = resolve(output, 'artifacts/coverage/generated');
+  run(['test', name + '.slnx', '--nologo', '--verbosity', 'quiet', '-clp:ErrorsOnly', '--logger', 'trx',
+    '--collect:XPlat Code Coverage', '--settings', 'coverage.runsettings', '--results-directory', results], resolve(output, 'api'));
+  execFileSync(process.execPath, [resolve(output, 'scripts/check-coverage.mjs'), results], { cwd: output, stdio: 'inherit' });
+}
+
+// Modo source, sem argumentos de pacote: precisa restaurar sem feed e passar nos testes, inclusive os das bibliotecas.
+{
+  const name = 'SourceProof';
+  const output = resolve(scratch, name);
+  run(['new', 'modular-api', '-n', name, '-o', output, '--debug:custom-hive', hive]);
+  checkSourceConsumption(output, name);
+  checkMarkdown(output);
   const results = resolve(output, 'artifacts/coverage/generated');
   run(['test', name + '.slnx', '--nologo', '--verbosity', 'quiet', '-clp:ErrorsOnly', '--logger', 'trx',
     '--collect:XPlat Code Coverage', '--settings', 'coverage.runsettings', '--results-directory', results], resolve(output, 'api'));
@@ -92,4 +116,4 @@ const build = execFileSync('dotnet', ['build', 'GeneratorProof.slnx', '--no-rest
 const generatedWarnings = build.split('\n').filter(line => /warning/.test(line) && /InvoiceManagement/.test(line));
 if (generatedWarnings.length) throw new Error('Código gerado com avisos:\n' + [...new Set(generatedWarnings)].join('\n'));
 run(['test', 'GeneratorProof.slnx', '--no-build', '--nologo', '--verbosity', 'quiet', '-clp:ErrorsOnly'], generatedApi);
-console.log('PASS: template genérico, exemplo e geradores, consumindo pacotes ' + version + '. Diretório isolado preservado para inspeção: ' + scratch);
+console.log('PASS: template genérico, exemplo e geradores consumindo pacotes ' + version + ', e modo source. Diretório isolado preservado para inspeção: ' + scratch);

@@ -29,28 +29,54 @@
       "value": "false",
       "description": "Verdadeiro só no repositório de origem: blocos <!--#if (sourceRepository) --> em Markdown saem do projeto gerado."
     },
+    "sharedMode": {
+      "type": "parameter",
+      "datatype": "choice",
+      "defaultValue": "source",
+      "description": "Como o projeto gerado recebe as bibliotecas Shared.* genéricas.",
+      "choices": [
+        {
+          "choice": "source",
+          "description": "Cópia do código-fonte no projeto, sem feed nem pacote; o projeto evolui a própria cópia."
+        },
+        {
+          "choice": "package",
+          "description": "Pacotes ModularApi.* do feed da base (--packageFeed), atualizados trocando a versão."
+        }
+      ]
+    },
+    "sharedSource": {
+      "type": "computed",
+      "value": "(sharedMode == \"source\")",
+      "description": "Verdadeiro quando o projeto gerado recebe o código-fonte das bibliotecas Shared.*."
+    },
     "sharedPackages": {
       "type": "generated",
-      "generator": "constant",
+      "generator": "switch",
       "parameters": {
-        "value": "true"
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          { "condition": "(sharedMode == \"package\")", "value": "true" },
+          { "condition": "", "value": "false" }
+        ]
       },
       "replaces": "false<!--sharedPackages-->",
-      "description": "O projeto gerado consome as bibliotecas Shared.* como pacotes ModularApi.*."
+      "description": "Liga UseSharedPackages só no modo package."
     },
     "packageFeed": {
       "type": "parameter",
       "datatype": "text",
       "defaultValue": "https://nuget.pkg.github.com/thiagocorreanet/index.json",
       "replaces": "MODULARAPI_FEED_URL",
-      "description": "URL (ou pasta) do feed com os pacotes ModularApi.*; gravada em api/nuget.config."
+      "description": "Só com --sharedMode package: URL (ou pasta) do feed com os pacotes ModularApi.*; gravada em api/nuget.config."
     },
     "sharedPackagesVersion": {
       "type": "parameter",
       "datatype": "text",
       "defaultValue": "1.0.0",
       "replaces": "1.0.0<!--sharedPackagesVersion-->",
-      "description": "Versão dos pacotes ModularApi.* gravada em Directory.Packages.props."
+      "description": "Só com --sharedMode package: versão dos pacotes ModularApi.* gravada em Directory.Packages.props."
     }
   },
   "sources": [
@@ -63,6 +89,9 @@
         "**/TestResults/**",
         "**/packages.lock.json",
         ".git/**",
+        "**/*.user",
+        "**/.idea/**",
+        "**/.vs/**",
         ".env",
         "**/*.feature.cs",
         "artifacts/**",
@@ -78,21 +107,33 @@
         ".env.*",
         "**/*.log",
         "api/src/shared/Directory.Build.props",
-        "api/src/shared/Shared.Kernel/**",
-        "api/src/shared/Shared.Contracts/**",
-        "api/src/shared/Shared.Data/**",
-        "api/src/shared/Shared.Http/**",
-        "api/src/shared/Shared.Messaging/**",
-        "api/src/shared/Shared.Observability/**",
-        "api/src/shared/Shared.WebHost/**",
         "CHANGELOG.md",
         ".github/workflows/release-packages.yml",
-        "scripts/pack-shared.mjs",
-        "api/tests/Tests.Unit/Shared/**",
-        "api/tests/Tests.Integration/Reliability/InboxTests.cs",
-        "api/tests/Tests.Integration/Reliability/ConsistencyKeyLockTests.cs"
+        "scripts/pack-shared.mjs"
       ],
       "modifiers": [
+        {
+          "condition": "(!sharedSource)",
+          "exclude": [
+            "api/src/shared/Shared.Kernel/**",
+            "api/src/shared/Shared.Contracts/**",
+            "api/src/shared/Shared.Data/**",
+            "api/src/shared/Shared.Http/**",
+            "api/src/shared/Shared.Messaging/**",
+            "api/src/shared/Shared.Observability/**",
+            "api/src/shared/Shared.WebHost/**",
+            "api/tests/Tests.Unit/Shared/**",
+            "api/tests/Tests.Integration/Reliability/InboxTests.cs",
+            "api/tests/Tests.Integration/Reliability/ConsistencyKeyLockTests.cs"
+          ]
+        },
+        {
+          "condition": "(sharedSource)",
+          "exclude": [
+            "api/nuget.template.config",
+            "docs/upgrading.md"
+          ]
+        },
         {
           "condition": "(!includeExample)",
           "exclude": [

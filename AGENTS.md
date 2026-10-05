@@ -5,7 +5,11 @@ API reutilizável em .NET 10. As decisões estão em `docs/architecture.md`; no 
 Contrato de trabalho completo: `CLAUDE.md`. Guias de apoio: `docs/architecture-practices.md` (onde uma regra mora, quando um padrão se justifica) e `docs/dotnet-practices.md` (código do dia a dia).
 
 - Preserve o monolito modular: `Host.Api`, `Module.*`, `Shared.*`; módulos dependem apenas de `Shared.*`.
+<!--#if (sharedSource) -->
+- As bibliotecas `Shared.*` genéricas são código deste projeto, copiado da base na geração e sem feed nem pacote (item `SharedReference`); continuam genéricas, sem regra nem nome de módulo de negócio. Contratos dos módulos ficam em `Shared.Contracts.Modules` (ADR-010).
+<!--#else -->
 - No projeto gerado, as bibliotecas `Shared.*` genéricas chegam como pacotes (item `SharedReference`, versão em `SharedPackagesVersion`); contratos dos módulos ficam em `Shared.Contracts.Modules`. Correção na base vira versão nova do pacote, não cópia de código (ADR-010, `docs/upgrading.md`).
+<!--#endif -->
 - Código e contratos técnicos são em inglês: identificadores, arquivos, rotas, JSON, enums, roles, schemas, eventos e códigos de erro. Mensagens humanas, comentários/XML e documentação são em pt-BR; o `README.md` fica em inglês, por ser a porta de entrada pública. Consulte `docs/language-conventions.md`.
 - Esta versão utiliza uma nova base de migrações em inglês. Não aponte o migrador para bases legadas nem remova a proteção contra históricos de schemas não registrados para contornar uma incompatibilidade.
 - Infraestrutura compartilhada não contém regras, schemas ou nomes dos módulos de exemplo.

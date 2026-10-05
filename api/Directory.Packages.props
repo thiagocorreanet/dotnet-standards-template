@@ -4,10 +4,10 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <PropertyGroup>
-    <!-- Versão dos pacotes Shared.* consumidos pelo projeto gerado (UseSharedPackages=true). Atualização: docs/upgrading.md. -->
+    <!-- Versão dos pacotes Shared.* consumidos pelo projeto gerado com sharedMode=package (UseSharedPackages=true); no modo source não são usados. Atualização: docs/upgrading.md, gerado só no modo package. -->
     <SharedPackagesVersion>1.0.0<!--sharedPackagesVersion--></SharedPackagesVersion>
   </PropertyGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseSharedPackages)' == 'true'">
     <PackageVersion Include="$(SharedPackagePrefix)Kernel" Version="$(SharedPackagesVersion)" />
     <PackageVersion Include="$(SharedPackagePrefix)Contracts" Version="$(SharedPackagesVersion)" />
     <PackageVersion Include="$(SharedPackagePrefix)Data" Version="$(SharedPackagesVersion)" />

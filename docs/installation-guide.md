@@ -10,7 +10,12 @@ A geração padrão entrega `Host.Api`, os módulos `Module.Identity` e `Module.
 
 Os módulos de exemplo `Module.Venues`, `Module.People`, `Module.Events` e `Module.Talks` só acompanham o projeto quando você escolhe `--includeExample true`.
 
-O novo projeto recebe uma **cópia do código** dos módulos, do host, dos testes, da infra e dos docs, sem referência de execução à pasta do template. As bibliotecas `Shared.*` genéricas chegam como **pacotes NuGet** do feed da base (`--packageFeed`, padrão GitHub Packages; versão em `--sharedPackagesVersion`), e são atualizadas trocando a versão: veja [`upgrading.md`](upgrading.md). O restante não se atualiza sozinho; melhorias do template em módulos, infra e docs precisam ser comparadas e incorporadas conscientemente.
+O novo projeto recebe uma **cópia do código** dos módulos, do host, dos testes, da infra e dos docs, sem referência de execução à pasta do template. As bibliotecas `Shared.*` genéricas (`Kernel`, `Contracts`, `Data`, `Http`, `Messaging`, `Observability`, `WebHost`) seguem `--sharedMode`:
+
+- `source` (padrão): o código delas também é copiado para `api/src/shared/`. Cada projeto tem a própria cópia, sem feed nem pacote, e a evolui de forma independente.
+- `package`: chegam como **pacotes NuGet** do feed da base (`--packageFeed`, padrão GitHub Packages; versão em `--sharedPackagesVersion`) e são atualizadas trocando a versão, como descreve `docs/upgrading.md` (gerado só nesse modo).
+
+O restante não se atualiza sozinho; melhorias do template em módulos, infra e docs precisam ser comparadas e incorporadas conscientemente.
 
 Não são copiados `.env`, `.local/`, `.secrets/`, `.git/`, `bin/`, `obj/`, resultados de testes, artefatos, documentação histórica de origem nem `.template.config/`. Assim, o projeto novo não se torna automaticamente outro template instalável. Mantenha a base original como fonte das próximas gerações.
 
@@ -83,11 +88,13 @@ cd billing-api
 
 Escolha apenas uma modalidade para a mesma pasta. Para comparar as duas, gere nomes e destinos diferentes.
 
-A solução será `api/BillingApi.slnx`; o serviço será `BillingApi.Api`. A chave da conexão é sempre `ConnectionStrings:Database` (variável `ConnectionStrings__Database`), porque o código que a lê vem do pacote `Shared.Data`. Nomes genéricos como `Host.Api`, `Module.Identity` e `Shared.Data` permanecem. Realm e clients OIDC não são renomeados automaticamente com `-n`.
+Para consumir as bibliotecas `Shared.*` como pacotes em vez de copiar o código, acrescente `--sharedMode package --packageFeed <url-ou-pasta-do-feed>` a qualquer um dos comandos.
+
+A solução será `api/BillingApi.slnx`; o serviço será `BillingApi.Api`. A chave da conexão é sempre `ConnectionStrings:Database` (variável `ConnectionStrings__Database`), porque o código que a lê está em `Shared.Data`. Nomes genéricos como `Host.Api`, `Module.Identity` e `Shared.Data` permanecem. Realm e clients OIDC não são renomeados automaticamente com `-n`.
 
 ## 5. Restaurar, compilar e executar os testes
 
-Defina as credenciais do feed dos pacotes da base (usuário do GitHub e token com `read:packages`; detalhes em [`upgrading.md`](upgrading.md)):
+Só no modo `--sharedMode package`: defina as credenciais do feed dos pacotes da base (usuário do GitHub e token com `read:packages`; detalhes em `docs/upgrading.md`):
 
 ```bash
 export MODULARAPI_FEED_USER=<usuario-github>

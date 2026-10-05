@@ -164,6 +164,7 @@ Os dumps de demonstração comprovam restauração lógica local, não disaster 
 - **Publicação:** workflow manual `release-packages`, com job de publicação no environment `packages` (aprovação).
 - **Identity e Audit:** `Module.Identity` e `Module.Audit` continuam código-fonte no projeto. As migrações vivem no assembly do módulo, e o projeto precisa poder evoluir schema, regras e endpoints.
 - **Nomes neutros no código compartilhado:** a chave da connection string passa a ser `ConnectionStrings:Database` e as anotações de auditoria, `Shared:*`. O código empacotado não acompanha mais a troca de nome do template.
+- **Modo de geração (revisão de 2026-10-05):** o pacote passa a ser opcional. `--sharedMode source`, o padrão, copia o código das sete bibliotecas e os testes delas para o projeto, com `UseSharedPackages=false`, sem `nuget.config` e sem feed; o código copiado acompanha a troca de nome do template. `--sharedMode package` mantém o consumo por pacote descrito acima. Motivo: projetos gerados para produtos sem relação entre si (bancos, infraestrutura e ciclos de entrega próprios) preferem ser donos do código a depender de um feed privado e de uma versão central.
 
 **Alternativas consideradas:**
 - Pacote também para Identity/Audit: atualização central, mas migrações e regras presas à versão do pacote.
@@ -181,6 +182,7 @@ Os dumps de demonstração comprovam restauração lógica local, não disaster 
 
 **Evidência e forma de verificar:**
 - `test-template.mjs` empacota num feed em pasta, gera os três projetos consumindo os pacotes e recusa biblioteca copiada, prefixo renomeado ou solução listando as bibliotecas.
+- `test-template.mjs` também gera um projeto no modo `source` e recusa biblioteca ausente, `UseSharedPackages` ligado, `nuget.config` ou solução sem as bibliotecas, antes de rodar os testes dele.
 - O workflow de release valida versão, `CHANGELOG`, testes e template antes de publicar.
 
 **Condição que justifica rever:** necessidade de versões independentes por biblioteca, ou de distribuir Identity/Audit de forma central.
