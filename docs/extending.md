@@ -8,6 +8,22 @@ A base é single-organization. Multi-tenancy requer TenantId em entidades, contr
 
 ## Novo módulo
 
+Comece pelos geradores, instalados junto com o template (`dotnet new install`). Rode-os na pasta `api/`:
+
+```bash
+cd api
+dotnet new modular-module -n Billing                                   # Module.Billing completo, já registrado
+dotnet new modular-usecase -n CreateInvoice --module Billing --command  # escrita: [Command] + POST
+dotnet new modular-usecase -n GetInvoice --module Billing               # consulta: GET por id
+dotnet restore                                                          # grava os packages.lock.json; faça commit
+```
+
+- **`modular-module`** cria `Module.<Nome>` com `.csproj`, `IModule` (rota `api/v1/<nome-em-kebab-case>`), `DbContext` com schema próprio, telemetria, `Domain/<Nome>Errors.cs`, a migração inicial (Outbox, Inbox e recibos) e um teste unitário. Também adiciona o projeto à solução e as referências em `Host.Api`, `Tests.Unit` e `Tests.Architecture`. Se algum post-action falhar, ele imprime o comando exato que faltou.
+- **`modular-usecase`** cria Request, Response, Validator, UseCase, Endpoint, AccessPolicy e um teste unitário. A policy nasce **negando tudo** e o caso de uso devolve `<Módulo>.NotImplemented`: nada fica exposto antes de você escrever a regra. Troque o teste de acesso pela matriz permitido/negado quando escrever a policy.
+- O código gerado compila e passa nos testes de arquitetura sem edição; `test-template.mjs` prova isso a cada mudança.
+
+Os passos abaixo descrevem o que os geradores fazem e o que continua sendo decisão sua.
+
 1. Crie `api/src/modules/Module.<Name>/Module.<Name>.csproj`, referenciando somente os Shared necessários. Adicione referência ao Host.Api. A descoberta usa assemblies `Module.*`; faça build/publish limpo ao remover módulos para não conservar DLL antiga.
 2. Implemente `IModule`: configure o DbContext com schema exclusivo, validators e casos de uso (as policies dos slices entram pela mesma varredura); mapeie o grupo versionado de endpoints. Use Identidade como exemplo pequeno e o domínio opcional como exemplo completo.
 3. Mantenha `Domain/`, `Shared/` e `UseCases/<Name>/` dentro do módulo. Use DTOs de entrada/saída, FluentValidation e Result. O endpoint só adapta HTTP.
@@ -31,7 +47,7 @@ Exemplo de comando EF, a partir de `api`:
 
 ```bash
 dotnet tool restore
-dotnet ef migrations add Initial --project src/modules/Module.New --startup-project src/hosts/Host.Api --context NewDbContext --output-dir Shared/Migrations
+dotnet ef migrations add Initial --project src/modules/Module.New --startup-project src/hosts/Host.Api --context NewDbContext --output-dir Migrations
 ```
 
 O factory de design usa `ConnectionStrings__ModularApi`; sem ela, existe apenas um endereço local de design sem senha. Confira a variável antes de executar comandos que acessam banco. Não grave segredos no csproj/appsettings.

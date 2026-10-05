@@ -42,7 +42,7 @@ Module.<Name>/
   Domain/                    entidades, value objects, erros do módulo
   Shared/                    DbContext, IModule, telemetria, handlers, regras de acesso comuns
   Shared/Configurations/     IEntityTypeConfiguration por entidade
-  Shared/Migrations/         migrações EF do schema do módulo
+  Migrations/                migrações EF do schema do módulo
   UseCases/<Name>/           Endpoint, Request, Response, UseCase, Validator, AccessPolicy
 ```
 
@@ -69,6 +69,8 @@ Estas regras protegem correção, segurança ou integridade dos dados. Quebrar q
 |---|---|
 | Regra que precisa valer em todos os caminhos | `Module.<Name>/Domain/` — método da entidade, não setter público |
 | Código de erro e mensagem de negócio | `Module.<Name>/Domain/<Name>Errors.cs` |
+| Módulo novo | `dotnet new modular-module -n <Nome>`, na pasta `api/` |
+| Caso de uso novo (os seis arquivos e o teste) | `dotnet new modular-usecase -n <Caso> --module <Módulo> [--command]`, na pasta `api/` |
 | Orquestração de um caso de uso | `Module.<Name>/UseCases/<Name>/<Name>UseCase.cs` |
 | Contrato HTTP de entrada e saída | `<Name>Request`/`<Name>Response`, no mesmo diretório do caso de uso |
 | Validação de formato, tamanho e obrigatoriedade | `<Name>Validator` (FluentValidation) |
@@ -152,7 +154,17 @@ dotnet restore api/ModularApi.slnx --locked-mode
 node scripts/check-dependencies.mjs
 node scripts/validate-infra.mjs
 node scripts/validate-production.mjs --fixture
-node scripts/test-template.mjs            # gera e testa os dois modos do template
+node scripts/test-template.mjs            # gera e testa os dois modos do template e os geradores
+```
+
+Geradores (na pasta `api/`; detalhes em [`docs/extending.md`](docs/extending.md)):
+
+```bash
+cd api
+dotnet new modular-module -n Billing                                   # Module.Billing completo, já registrado
+dotnet new modular-usecase -n CreateInvoice --module Billing --command  # escrita: [Command] + POST
+dotnet new modular-usecase -n GetInvoice --module Billing               # consulta: GET por id
+dotnet restore                                                          # grava os packages.lock.json; faça commit
 ```
 
 Integração e testes funcionais sobem PostgreSQL real por Testcontainers; Docker precisa estar disponível. Ambiente local completo, cobertura e gates: [`docs/quality-gates.md`](docs/quality-gates.md) e [`README.md`](README.md).

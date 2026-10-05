@@ -19,6 +19,7 @@ There is a sibling template for the frontend, built on the same idea of rules wr
 | Serilog and OpenTelemetry through one route, with log and trace sanitization | `Shared.Observability` |
 | Tests that refuse dependencies between modules and types named `Repository` | `api/tests/Tests.Architecture` |
 | Project generation with and without the example domain | `.template.config` and `scripts/test-template.mjs` |
+| Module and use case generators (`modular-module`, `modular-usecase`) | `templates/` and `docs/extending.md` |
 
 ## Overview
 

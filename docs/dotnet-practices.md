@@ -398,7 +398,7 @@ Reexecução e commit indeterminado:
 
 Conflito de atualização concorrente entre dois clientes exige política explícita: rejeitar, recarregar ou reconciliar, com token de concorrência quando a regra pedir detecção. Comparar com a versão que **o cliente recebeu** é diferente de recarregar a mais recente no início do update.
 
-Migrações: geradas com `dotnet ef` a partir de `api`, com `--output-dir Shared/Migrations` no projeto do módulo e `Host.Api` como startup. Revise o SQL. A aplicação é um job explícito (`Host.Api migrate`) sob advisory lock, com credencial DDL própria; o startup normal recusa migrações pendentes. O migrador recusa históricos EF em schemas não registrados — essa proteção não é conversão de dados.
+Migrações: geradas com `dotnet ef` a partir de `api`, com `--output-dir Migrations` no projeto do módulo e `Host.Api` como startup. Revise o SQL. A aplicação é um job explícito (`Host.Api migrate`) sob advisory lock, com credencial DDL própria; o startup normal recusa migrações pendentes. O migrador recusa históricos EF em schemas não registrados — essa proteção não é conversão de dados.
 
 <a id="15-integracoes"></a>
 ## 15. Eventos e integrações externas
