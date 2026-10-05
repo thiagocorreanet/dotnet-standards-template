@@ -14,7 +14,7 @@ Use um diretório novo por execução. O verificador exige quatro relatórios, i
 
 Pisos em `api/coverage-policy.json`: total 70% de linhas e 60% de branches; gates específicos para processador/sonda, sanitização de logs e autenticação OIDC. O total inclui exemplo quando presente; o núcleo gerado possui menos código/testes. Migrações e código gerado em obj são exclusões declaradas; migrações continuam testadas em PostgreSQL. Cobertura é evidência de execução, não de correção de toda asserção.
 
-`node scripts/test-template.mjs` gera os dois modos em diretórios novos, executa as quatro suítes com cobertura e exige os gates em ambos. Dessa forma, a aprovação do núcleo genérico não depende dos testes dos módulos de exemplo.
+`node scripts/test-template.mjs` gera os dois modos em diretórios novos, executa as quatro suítes com cobertura e exige os gates em ambos. Dessa forma, a aprovação do núcleo genérico não depende dos testes dos módulos de exemplo. Antes dos testes, ele recusa o projeto gerado que contenha documentos históricos da origem (`implementation-status`, `technical-review`, `corrections-review`, `architecture-review`, `docs/reference`), bloco `<!--#if (sourceRepository) -->` não processado ou link Markdown relativo quebrado.
 
 ## Release e verificações periódicas
 

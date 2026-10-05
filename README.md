@@ -223,12 +223,17 @@ The documents below are written in pt-BR, as are the human-facing messages in th
 - [Creating a module and adapting the template](docs/extending.md)
 - [Identity, authorization and privacy](docs/security.md)
 - [Running, incidents, backup and production](docs/runbooks.md)
-- [Coverage of the original document](docs/implementation-status.md), available in the source repository
-- [Technical review of the delivery](docs/technical-review.md), available in the source repository
-- [Corrections from the quality re-assessment](docs/corrections-review.md)
 - [Test, coverage and release gates](docs/quality-gates.md)
+<!--#if (sourceRepository) -->
 
-This is an implemented and tested base, not a claim of universal production readiness. Frontend, multi-tenancy, migrating users from an older system, approved SLO/RPO/RTO, legal retention, IdP high availability and alert routing depend on the product and the environment. Those dependencies are identified in the matrix; they are not treated as gaps closed by a local test.
+Source repository only; the template does not export these:
+
+- [Coverage of the original document](docs/implementation-status.md)
+- [Technical review of the delivery](docs/technical-review.md)
+- [Corrections from the quality re-assessment](docs/corrections-review.md)
+<!--#endif -->
+
+This is an implemented and tested base, not a claim of universal production readiness. Frontend, multi-tenancy, migrating users from an older system, approved SLO/RPO/RTO, legal retention, IdP high availability and alert routing depend on the product and the environment. Those dependencies are not treated as gaps closed by a local test.
 
 **New database:** the migrations in this base are not a supported upgrade from the old ASP.NET Identity authentication **or from the version of this template with Portuguese names**. Do not point the migrator at those databases. The migrator refuses histories in unregistered schemas before applying any migration; that is a protection, not a data conversion.
 

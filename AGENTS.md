@@ -20,6 +20,8 @@ Contrato de trabalho completo: `CLAUDE.md`. Guias de apoio: `docs/architecture-p
 - Testes de segurança, concorrência e resiliência usam PostgreSQL real em Testcontainers.
 - Configuração local e produtiva são independentes. Não publicar banco, OTLP ou gerenciamento em produção; não oferecer segredo padrão produtivo.
 - Módulos de eventos são exemplo removível. A geração sem exemplo deve compilar e executar testes da base genérica.
-- Atualize `docs/implementation-status.md` com evidência de aceite, sem marcar requisitos externos como verificados localmente.
+<!--#if (sourceRepository) -->
+- No repositório de origem do template, atualize `docs/implementation-status.md` com evidência de aceite, sem marcar requisitos externos como verificados localmente.
+<!--#endif -->
 
 Comandos principais: `cd api && dotnet test`; scripts de operações ficam em `scripts/`.

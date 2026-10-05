@@ -171,7 +171,9 @@ Integração e testes funcionais sobem PostgreSQL real por Testcontainers; Docke
 - [ ] Idioma respeitado: identificador em inglês, mensagem e documentação em pt-BR, `README.md` em inglês.
 - [ ] Testes cobrem regra, rejeição de acesso indevido e o risco de concorrência quando existir.
 - [ ] `cd api && dotnet test` passou.
-- [ ] [`docs/implementation-status.md`](docs/implementation-status.md) atualizado quando houver evidência de aceite, sem marcar requisito externo como verificado localmente.
+<!--#if (sourceRepository) -->
+- [ ] [`docs/implementation-status.md`](docs/implementation-status.md) atualizado quando houver evidência de aceite, sem marcar requisito externo como verificado localmente. Este arquivo só existe no repositório de origem do template.
+<!--#endif -->
 
 ## Documentação: o que ler e quando
 
