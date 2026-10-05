@@ -5,6 +5,8 @@
         <Configuration>
           <Format>json,cobertura</Format>
           <Include>[Shared.*]*,[Module.*]*,[Host.*]*</Include>
+          <!-- Module.RateLimitProbe é módulo de teste (api/tests), não código de produção. -->
+          <Exclude>[Module.RateLimitProbe]*</Exclude>
           <ExcludeByFile>**/Migrations/**,**/obj/**</ExcludeByFile>
           <IncludeTestAssembly>false</IncludeTestAssembly>
         </Configuration>

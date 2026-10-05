@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Módulo só de teste: verifica o padrão de política nomeada de rate limiting registrada pelo próprio módulo.
+    Referenciado apenas por Tests.Integration; a descoberta de módulos o encontra pelo nome Module.* na pasta de saída do teste.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Module.RateLimitProbe</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../../src/shared/Shared.Http/Shared.Http.csproj" />
+    <ProjectReference Include="../../src/shared/Shared.WebHost/Shared.WebHost.csproj" />
+  </ItemGroup>
+</Project>

@@ -14,5 +14,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <ProjectReference Include="../../src/hosts/Host.Api/Host.Api.csproj" />
+    <ProjectReference Include="../Module.RateLimitProbe/Module.RateLimitProbe.csproj" />
   </ItemGroup>
 </Project>

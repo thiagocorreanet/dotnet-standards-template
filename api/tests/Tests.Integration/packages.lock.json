@@ -812,6 +812,13 @@
           "Shared.WebHost": "[1.0.0, )"
         }
       },
+      "module.ratelimitprobe": {
+        "type": "Project",
+        "dependencies": {
+          "Shared.Http": "[1.0.0, )",
+          "Shared.WebHost": "[1.0.0, )"
+        }
+      },
       "module.talks": {
         "type": "Project",
         "dependencies": {

@@ -887,6 +887,13 @@
           "Shared.WebHost": "[1.0.0, )"
         }
       },
+      "module.ratelimitprobe": {
+        "type": "Project",
+        "dependencies": {
+          "Shared.Http": "[1.0.0, )",
+          "Shared.WebHost": "[1.0.0, )"
+        }
+      },
       "module.talks": {
         "type": "Project",
         "dependencies": {
@@ -980,6 +987,7 @@
           "Host.Api": "[1.0.0, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[10.0.12, )",
           "Microsoft.NET.Test.Sdk": "[18.10.1, )",
+          "Module.RateLimitProbe": "[1.0.0, )",
           "NSubstitute": "[6.2.0, )",
           "Shouldly": "[4.3.0, )",
           "Testcontainers.PostgreSql": "[4.15.0, )",
