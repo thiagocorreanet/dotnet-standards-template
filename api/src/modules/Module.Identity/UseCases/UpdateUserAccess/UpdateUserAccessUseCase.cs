@@ -26,6 +26,12 @@ internal sealed class UpdateUserAccessUseCase(IdentityDbContext db, ICurrentUser
         return new UpdateUserAccessResponse(user.Id, user.IsActive, user.TokensValidAfter);
     }
 }
+/// <summary>Somente administrador ativa, desativa ou revoga acesso.</summary>
+internal sealed class UpdateUserAccessAccessPolicy(ICurrentUser user) : IAccessPolicy<UpdateUserAccessRequest>
+{
+    public Task<bool> CanExecuteAsync(UpdateUserAccessRequest request, CancellationToken ct) =>
+        Task.FromResult(user.IsAuthenticated && user.HasRole(DefaultRoles.Administrator));
+}
 internal sealed class UpdateUserAccessEndpoint : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder group) =>

@@ -21,6 +21,12 @@ internal sealed class GetCurrentUserUseCase(IdentityDbContext db, ICurrentUser a
             : new GetCurrentUserResponse(user.Id, user.UserName, user.Email, actor.Roles);
     }
 }
+/// <summary>Cada usuário consulta apenas o próprio perfil.</summary>
+internal sealed class GetCurrentUserAccessPolicy(ICurrentUser user) : IAccessPolicy<GetCurrentUserRequest>
+{
+    public Task<bool> CanExecuteAsync(GetCurrentUserRequest request, CancellationToken ct) =>
+        Task.FromResult(user.IsAuthenticated && request.UserId == user.Id);
+}
 internal sealed class GetCurrentUserEndpoint : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder group) =>

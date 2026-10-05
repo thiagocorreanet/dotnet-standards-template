@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Shared.Contracts.Identity;
+using Shared.Contracts.Common;
 using Shared.Http.Endpoints;
 using Shared.Http.Results;
 using Shared.Kernel.Results;
@@ -38,6 +39,12 @@ internal sealed class RegisterUserUseCase(IdentityDbContext db, IOptions<OidcOpt
         await db.SaveChangesAsync(ct);
         return new RegisterUserResponse(user.Id, user.Subject);
     }
+}
+/// <summary>Somente administrador provisiona vínculo externo.</summary>
+internal sealed class RegisterUserAccessPolicy(ICurrentUser user) : IAccessPolicy<RegisterUserRequest>
+{
+    public Task<bool> CanExecuteAsync(RegisterUserRequest request, CancellationToken ct) =>
+        Task.FromResult(user.IsAuthenticated && user.HasRole(DefaultRoles.Administrator));
 }
 internal sealed class RegisterUserEndpoint : IEndpoint
 {

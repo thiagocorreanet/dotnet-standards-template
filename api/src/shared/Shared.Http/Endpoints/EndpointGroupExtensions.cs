@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Shared.Observability.Telemetry;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,15 +38,23 @@ public static class EndpointGroupExtensions
 
     /// <summary>
     /// Registra todos os casos de uso (<see cref="IUseCase{TRequest,TResponse}"/>) do assembly como scoped,
-    /// envolvidos pelo decorator de telemetria do módulo.
+    /// envolvidos pelo decorator de telemetria do módulo, e a <see cref="IAccessPolicy{TRequest}"/> de cada um.
     /// </summary>
-    public static IServiceCollection AddUseCasesFromAssembly(this IServiceCollection services, Assembly assembly, ModuleTelemetry telemetry)
+    /// <exception cref="InvalidOperationException">
+    /// Caso de uso sem policy, ou com mais de uma, interrompe a composição: falha no startup, não na primeira requisição.
+    /// </exception>
+    public static IServiceCollection AddUseCasesFromAssembly(this IServiceCollection services, Assembly assembly, ModuleTelemetry telemetry) =>
+        services.AddUseCasesFromTypes(assembly.GetTypes(), telemetry);
+
+    internal static IServiceCollection AddUseCasesFromTypes(this IServiceCollection services, Type[] types, ModuleTelemetry telemetry)
     {
-        var contextType = assembly.GetTypes().Single(t => !t.IsAbstract && typeof(DbContext).IsAssignableFrom(t));
-        foreach (var type in assembly.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false }))
+        var contextType = types.Single(t => !t.IsAbstract && typeof(DbContext).IsAssignableFrom(t));
+        foreach (var type in types.Where(t => t is { IsClass: true, IsAbstract: false }))
         {
             foreach (var iface in type.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IUseCase<,>)))
             {
+                var policyContract = typeof(IAccessPolicy<>).MakeGenericType(iface.GenericTypeArguments[0]);
+                services.TryAddScoped(policyContract, FindAccessPolicy(types, type, policyContract));
                 var decorator = typeof(TelemetryUseCaseDecorator<,>).MakeGenericType(iface.GenericTypeArguments);
                 services.AddScoped(type);
                 services.AddScoped(iface, sp =>
@@ -61,5 +70,19 @@ public static class EndpointGroupExtensions
         }
 
         return services;
+    }
+
+    private static Type FindAccessPolicy(Type[] types, Type useCaseType, Type policyContract)
+    {
+        var candidates = types.Where(t => t is { IsClass: true, IsAbstract: false } && policyContract.IsAssignableFrom(t)).ToArray();
+        var request = policyContract.GenericTypeArguments[0].Name;
+        return candidates.Length switch
+        {
+            1 => candidates[0],
+            0 => throw new InvalidOperationException(
+                $"Caso de uso {useCaseType.Name} sem política de acesso. Crie uma classe que implemente IAccessPolicy<{request}> no diretório do caso de uso."),
+            _ => throw new InvalidOperationException(
+                $"Caso de uso {useCaseType.Name} com mais de uma IAccessPolicy<{request}>: {string.Join(", ", candidates.Select(c => c.Name))}."),
+        };
     }
 }
