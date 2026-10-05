@@ -48,6 +48,7 @@
         "docs/technical-review.md",
         "docs/implementation-status.md",
         ".template.config/**",
+        "templates/**",
         ".local/**",
         ".secrets/**",
         ".env.*",

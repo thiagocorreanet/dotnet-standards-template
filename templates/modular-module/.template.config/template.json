@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Project Team",
+  "classifications": [
+    "Web",
+    "API",
+    "Modular"
+  ],
+  "identity": "ModularApi.Module",
+  "name": "Módulo do Modular API",
+  "description": "Cria Module.<Nome> com IModule, DbContext, telemetria, migração inicial e teste. Execute na pasta api/ do projeto.",
+  "shortName": "modular-module",
+  "sourceName": "ModuleName",
+  "preferNameDirectory": false,
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "symbols": {
+    "routePrefix": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "kebabCase",
+      "replaces": "module-route",
+      "description": "Prefixo de rota em kebab-case derivado do nome (api/v1/<prefixo>)."
+    }
+  },
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        ".template.config/**"
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    {
+      "path": "src/modules/Module.ModuleName/Module.ModuleName.csproj"
+    }
+  ],
+  "postActions": [
+    {
+      "description": "Adiciona o módulo à solução.",
+      "actionId": "D396686C-DE0E-4DE6-906D-291CD29FC5DE",
+      "args": {
+        "solutionFolder": "src/modules",
+        "primaryOutputIndexes": "0"
+      },
+      "manualInstructions": [
+        {
+          "text": "Execute em api/: dotnet sln add --solution-folder src/modules src/modules/Module.ModuleName/Module.ModuleName.csproj"
+        }
+      ],
+      "continueOnError": true,
+      "applyFileRenamesToManualInstructions": true
+    },
+    {
+      "description": "Referencia o módulo no host (a descoberta usa os Module.*.dll ao lado do host).",
+      "actionId": "B17581D1-C5C9-4489-8F0A-004BE667B814",
+      "args": {
+        "targetFiles": [
+          "src/hosts/Host.Api/Host.Api.csproj"
+        ],
+        "referenceType": "project",
+        "reference": "src/modules/Module.ModuleName/Module.ModuleName.csproj"
+      },
+      "manualInstructions": [
+        {
+          "text": "Execute em api/: dotnet add src/hosts/Host.Api/Host.Api.csproj reference src/modules/Module.ModuleName/Module.ModuleName.csproj"
+        }
+      ],
+      "continueOnError": true,
+      "applyFileRenamesToArgs": [
+        "reference"
+      ],
+      "applyFileRenamesToManualInstructions": true
+    },
+    {
+      "description": "Referencia o módulo nos testes unitários.",
+      "actionId": "B17581D1-C5C9-4489-8F0A-004BE667B814",
+      "args": {
+        "targetFiles": [
+          "tests/Tests.Unit/Tests.Unit.csproj"
+        ],
+        "referenceType": "project",
+        "reference": "src/modules/Module.ModuleName/Module.ModuleName.csproj"
+      },
+      "manualInstructions": [
+        {
+          "text": "Execute em api/: dotnet add tests/Tests.Unit/Tests.Unit.csproj reference src/modules/Module.ModuleName/Module.ModuleName.csproj"
+        }
+      ],
+      "continueOnError": true,
+      "applyFileRenamesToArgs": [
+        "reference"
+      ],
+      "applyFileRenamesToManualInstructions": true
+    },
+    {
+      "description": "Referencia o módulo nos testes de arquitetura.",
+      "actionId": "B17581D1-C5C9-4489-8F0A-004BE667B814",
+      "args": {
+        "targetFiles": [
+          "tests/Tests.Architecture/Tests.Architecture.csproj"
+        ],
+        "referenceType": "project",
+        "reference": "src/modules/Module.ModuleName/Module.ModuleName.csproj"
+      },
+      "manualInstructions": [
+        {
+          "text": "Execute em api/: dotnet add tests/Tests.Architecture/Tests.Architecture.csproj reference src/modules/Module.ModuleName/Module.ModuleName.csproj"
+        }
+      ],
+      "continueOnError": true,
+      "applyFileRenamesToArgs": [
+        "reference"
+      ],
+      "applyFileRenamesToManualInstructions": true
+    },
+    {
+      "description": "Próximo passo obrigatório.",
+      "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+      "args": {},
+      "manualInstructions": [
+        {
+          "text": "Execute em api/: dotnet restore (grava os packages.lock.json novos e alterados) e faça commit deles; o CI restaura com --locked-mode. Depois: dotnet new modular-usecase -n <Caso> --module ModuleName [--command]."
+        }
+      ],
+      "continueOnError": true,
+      "applyFileRenamesToManualInstructions": true
+    }
+  ]
+}

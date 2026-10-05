@@ -46,4 +46,23 @@ for (const example of [false, true]) {
     '--collect:XPlat Code Coverage', '--settings', 'coverage.runsettings', '--results-directory', results], resolve(output, 'api'));
   execFileSync(process.execPath, [resolve(output, 'scripts/check-coverage.mjs'), results], { cwd: output, stdio: 'inherit' });
 }
-console.log('PASS: template genérico e exemplo. Diretório isolado preservado para inspeção: ' + scratch);
+
+// Geradores: projeto núcleo + módulo + um comando e uma consulta, sem nenhuma edição manual.
+const generated = resolve(scratch, 'GeneratorProof');
+const generatedApi = resolve(generated, 'api');
+run(['new', 'modular-api', '-n', 'GeneratorProof', '-o', generated, '--debug:custom-hive', hive]);
+run(['new', 'modular-module', '-n', 'InvoiceManagement', '--debug:custom-hive', hive], generatedApi);
+run(['new', 'modular-usecase', '-n', 'CreateInvoice', '--module', 'InvoiceManagement', '--command', '--debug:custom-hive', hive], generatedApi);
+run(['new', 'modular-usecase', '-n', 'GetInvoice', '--module', 'InvoiceManagement', '--debug:custom-hive', hive], generatedApi);
+// Os post-actions usam continueOnError: confirme que cada registro aconteceu.
+for (const file of ['GeneratorProof.slnx', 'src/hosts/Host.Api/Host.Api.csproj', 'tests/Tests.Unit/Tests.Unit.csproj', 'tests/Tests.Architecture/Tests.Architecture.csproj'])
+  if (!readFileSync(resolve(generatedApi, file), 'utf8').includes('Module.InvoiceManagement')) throw new Error('Gerador de módulo não registrou o módulo em ' + file);
+for (const file of ['src/modules/Module.InvoiceManagement/UseCases/CreateInvoice/CreateInvoiceAccessPolicy.cs',
+  'src/modules/Module.InvoiceManagement/UseCases/GetInvoice/GetInvoiceEndpoint.cs', 'tests/Tests.Unit/InvoiceManagement/CreateInvoiceTests.cs'])
+  if (!existsSync(resolve(generatedApi, file))) throw new Error('Gerador de caso de uso não criou ' + file);
+run(['restore', 'GeneratorProof.slnx', '--nologo', '--verbosity', 'quiet'], generatedApi);
+const build = execFileSync('dotnet', ['build', 'GeneratorProof.slnx', '--no-restore', '--nologo', '--verbosity', 'quiet'], { cwd: generatedApi, encoding: 'utf8' });
+const generatedWarnings = build.split('\n').filter(line => /warning/.test(line) && /InvoiceManagement/.test(line));
+if (generatedWarnings.length) throw new Error('Código gerado com avisos:\n' + [...new Set(generatedWarnings)].join('\n'));
+run(['test', 'GeneratorProof.slnx', '--no-build', '--nologo', '--verbosity', 'quiet', '-clp:ErrorsOnly'], generatedApi);
+console.log('PASS: template genérico, exemplo e geradores. Diretório isolado preservado para inspeção: ' + scratch);
