@@ -4,7 +4,7 @@
 
 Escolha nome, audience, realm e roles do produto. As roles de demonstração `Administrator`/`Organizer`/`Participant` são configuráveis, mas alterar `DefaultRoles` exige atualizar policies e testes. Não confunda identidade com pessoa de negócio nem use e-mail como chave de vínculo. Para a primeira instalação, siga `installation-guide.md`.
 
-A base é single-organization. Multi-tenancy requer TenantId em entidades, contratos, índices, policies, dados históricos e testes de isolamento; não basta acrescentar uma claim.
+A base é single-organization. Multi-tenancy requer TenantId em entidades, contratos, índices, policies, dados históricos e testes de isolamento; não basta acrescentar uma claim. Opções e recomendação em ADR-015 (proposto), em [`architecture.md`](architecture.md).
 
 ## Novo módulo
 

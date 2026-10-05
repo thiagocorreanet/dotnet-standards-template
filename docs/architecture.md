@@ -185,6 +185,179 @@ Os dumps de demonstração comprovam restauração lógica local, não disaster 
 
 **Condição que justifica rever:** necessidade de versões independentes por biblioteca, ou de distribuir Identity/Audit de forma central.
 
+## ADRs propostos (não implementados)
+
+Os ADRs abaixo estão com status **Proposto**: registram opções e uma recomendação para decisões que a base ainda não tomou. Nada aqui está implementado. A equipe decide, e só então o ADR passa a **Aceito**, com código e testes.
+
+## ADR-011 — Jobs agendados
+
+**Status:** Proposto, 2026-10-05.
+
+**Contexto:**
+- **O que existe hoje:** não há agendador. As tarefas periódicas são da infraestrutura: o `OutboxProcessor` faz a retenção uma vez por hora e a `OutboxProbe` atualiza o snapshot.
+- **O que vem pela frente:** produtos costumam precisar de rotinas de negócio, como expirar inscrições, enviar lembretes ou consolidar relatórios.
+- **Restrições desta base:**
+  - várias réplicas não podem executar a mesma rotina ao mesmo tempo;
+  - escrita de negócio passa pela fronteira transacional com a chave de consistência (ADR-003, ADR-009) e pela policy de acesso;
+  - efeito externo vira intenção na Outbox;
+  - não há broker.
+
+**Opções:**
+
+| Opção | Prós | Contras |
+|---|---|---|
+| A. `BackgroundService` com `PeriodicTimer` e advisory lock por job (só uma réplica executa), mais uma tabela `JobRuns` no schema do módulo | Sem dependência nova. Reaproveita o lock e a observabilidade da base. A rotina chama um `IUseCase` com `[Command]`, igual à API. | Sem cron completo nem tratamento de execução perdida (misfire). O histórico é só o que a tabela guardar. Cada job precisa de código de agendamento. |
+| B. Quartz.NET com job store PostgreSQL em cluster | Cron, misfire, clustering e histórico prontos. | Dependência e tabelas próprias (schema e migrações à parte). Mais um modelo mental. A execução precisa ser encaixada na fronteira transacional da base. |
+| C. Hangfire com storage PostgreSQL | Painel, retries e fila persistente. | Painel é superfície de ataque (autorização própria). Serializa chamadas de método. Recursos relevantes são pagos. Mais pesado que o necessário. |
+| D. Agendador externo (CronJob do Kubernetes, scheduler da nuvem) chamando um comando do host, como já existe `migrate` | Isolado do processo web. A operação controla horário, retry e alerta. | Depende da plataforma de deploy. A configuração fica fora do repositório da aplicação. Cada execução sobe um processo. |
+
+**Recomendação:**
+- **A** para rotinas curtas e frequentes, dentro do processo:
+  - um `IScheduledJob` registrado pelo módulo;
+  - advisory lock com a chave do job;
+  - execução por `IUseCase` com identidade técnica de sistema, `[Command]` e policy própria;
+  - métrica de última execução e alerta de atraso.
+- **D** para lotes pesados ou raros.
+- **Reavaliar B** quando houver muitos jobs com cron e necessidade real de misfire.
+
+**Condição para decidir:**
+- o primeiro requisito de rotina de negócio com horário;
+- o SLO de atraso aceitável;
+- a plataforma de deploy (se oferece CronJob).
+
+## ADR-012 — Upload e armazenamento de arquivos
+
+**Status:** Proposto, 2026-10-05.
+
+**Contexto:**
+- A API não recebe arquivos. O corpo das requisições é limitado a 1 MiB, e conteúdos de palestra são só URLs.
+- Arquivos costumam ser dados pessoais ou documentos (RG, contrato, foto), com exigência de retenção e descarte.
+- A unidade transacional é reexecutável (ADR-003), então gravar arquivo dentro do comando duplicaria efeito externo.
+
+**Opções:**
+
+| Opção | Prós | Contras |
+|---|---|---|
+| A. `bytea` no PostgreSQL, na tabela do módulo | Transação única com os metadados; backup junto do banco. | Banco e backups crescem rápido; streaming e limites ruins; pressão sobre o pool de conexões. |
+| B. Object storage (S3 compatível ou Azure Blob) com URL pré-assinada; metadados e estado no módulo | Upload direto do cliente, sem passar pela API; escala e custo adequados; retenção por política do bucket. | Infraestrutura nova; consistência entre metadado e objeto exige estados e reconciliação; MinIO no ambiente local. |
+| C. Volume de filesystem montado no host | Simples no local. | Não serve para várias réplicas sem storage compartilhado; backup e permissões manuais. |
+
+**Recomendação:** **B**, com as seguintes regras:
+- **Ciclo de vida:**
+  1. o comando grava a intenção (metadado `Pending`, dono, tamanho e tipo declarados) e devolve uma URL pré-assinada de curta duração;
+  2. o cliente envia o arquivo direto ao storage;
+  3. um evento de confirmação (ou o próprio cliente) dispara verificação assíncrona pela Outbox: tamanho, tipo real por assinatura e antivírus;
+  4. só então o arquivo passa a `Available`.
+- **Proteções:**
+  - bucket privado;
+  - download sempre por URL pré-assinada emitida depois da policy do recurso;
+  - auditoria só do metadado, nunca do conteúdo nem do nome original sem sanitização;
+  - retenção e exclusão definidas pelo produto.
+- **Ambiente local:** MinIO num profile próprio, fora do modo lite.
+
+**Condição para decidir:**
+- os tipos e tamanhos de arquivo do produto;
+- a exigência de antivírus;
+- a plataforma de storage disponível;
+- a política de retenção (LGPD).
+
+## ADR-013 — Cache
+
+**Status:** Proposto, 2026-10-05.
+
+**Contexto:**
+- Não há cache: toda leitura vai ao PostgreSQL, com projeção e `TagWith`.
+- Há várias réplicas, então o cache em memória de uma réplica não vê a escrita de outra.
+- A autorização é por recurso e por usuário: um cache posicionado antes da policy vazaria dados.
+- Dados pessoais em cache estendem o tempo de retenção.
+
+**Opções:**
+
+| Opção | Prós | Contras |
+|---|---|---|
+| A. Sem cache (padrão atual), com consulta otimizada e índices | Sem inconsistência nem invalidação; mais simples. | Toda leitura custa banco. |
+| B. `HybridCache` do .NET só em memória (L1), para dados de referência não pessoais com TTL curto | Sem infraestrutura nova; proteção contra stampede embutida. | Réplicas divergem até o TTL vencer; invalidação só local. |
+| C. `HybridCache` com L2 distribuído (Redis) | Coerência entre réplicas; invalidação central. | Infraestrutura nova (Redis com HA, TLS, credenciais); mais um ponto de falha; dado pessoal fora do banco. |
+| D. Cache HTTP (`ETag`, `Cache-Control`) em leituras públicas ou do próprio usuário | Sem estado no servidor; o cliente economiza banda. | Só vale para respostas estáveis; com `private` e `Vary` errados, uma resposta autenticada vaza. |
+
+**Recomendação:**
+- **A** continua o padrão.
+- Diante de **medida** (latência ou carga no banco) para dados de referência, adotar **B**:
+  - chave com o nome do caso de uso;
+  - cache aplicado **depois** da policy e nunca de decisão de autorização;
+  - invalidação pelo evento de integração da escrita (consumidor com Inbox), mais TTL como rede de segurança.
+- **C** só com várias réplicas e divergência inaceitável, em ADR próprio para o Redis.
+- **D** para leituras anônimas como a validação de certificado.
+
+**Condição para decidir:**
+- uma métrica de latência ou de carga que justifique o cache;
+- quais dados são de referência;
+- a tolerância a dado defasado por caso de uso.
+
+## ADR-014 — Chave de idempotência para requisições do cliente
+
+**Status:** Proposto, 2026-10-05.
+
+**Contexto:**
+- O `CommandReceipt` (ADR-003) resolve o retry **interno** e o commit indeterminado. Ele não resolve o cliente que reenvia a mesma requisição depois de timeout, queda de conexão ou 503.
+- Operações com efeito sensível (pagamento, inscrição paga, emissão de documento) precisam que o reenvio devolva o mesmo resultado sem repetir o efeito.
+- Hoje, a proteção vem de restrições únicas de negócio (inscrição ativa única, certificado único).
+
+**Opções:**
+
+| Opção | Prós | Contras |
+|---|---|---|
+| A. Cabeçalho `Idempotency-Key` com tabela `(chave, usuário, rota, hash do request, estado, resultado)` gravada na mesma transação do comando | Padrão conhecido; resolve reenvio genérico; integra com a fronteira transacional (lock e receipt). | Tabela e retenção novas; precisa definir o que guardar da resposta sem guardar dado pessoal; o cliente precisa gerar e reutilizar a chave. |
+| B. Chave natural de negócio com restrição única por operação | Sem infraestrutura genérica; a regra fica explícita no domínio. | Nem toda operação tem chave natural; o reenvio recebe 409 em vez do resultado original. |
+| C. Id do recurso gerado pelo cliente (`PUT /recursos/{id}`) | Reenvio idempotente por construção. | Muda o contrato da API; o cliente passa a escolher ids; não serve para ações que não criam recurso. |
+
+**Recomendação:** **A** como opt-in por endpoint, combinada com **B** onde existir chave natural.
+- **Como funciona:**
+  - um atributo `[Idempotent]` no caso de uso faz o `TransactionalUseCaseDecorator` gravar a chave no mesmo commit;
+  - mesma chave com outro request: 422;
+  - a mesma chave ainda em andamento: 409;
+  - a mesma chave já concluída: devolve o status e o id do recurso gravados, sem o corpo com dados pessoais (o cliente relê o recurso, se precisar).
+- **Retenção** curta e configurável, com escopo por usuário e rota.
+- **Não implementar** antes de existir uma operação com efeito que justifique.
+
+**Condição para decidir:**
+- a primeira operação com efeito não reversível;
+- o contrato com os clientes (quem gera a chave e por quanto tempo vale).
+
+## ADR-015 — Multi-tenancy
+
+**Status:** Proposto, 2026-10-05.
+
+**Contexto:** a base é de uma organização só (`extending.md`). Atender vários clientes no mesmo sistema afeta quase tudo:
+- entidades, contratos e índices únicos (passam a ser por tenant);
+- policies;
+- chaves de consistência (que precisam incluir o tenant);
+- Outbox e auditoria;
+- identidade (issuer ou claim de tenant);
+- telemetria (tenant como rótulo explode a cardinalidade);
+- backup e restauração por cliente;
+- vizinho barulhento.
+
+**Opções:**
+
+| Opção | Prós | Contras |
+|---|---|---|
+| A. Implantação separada por cliente (silo: banco, IdP e API próprios) | Isolamento total; nenhuma mudança de código; backup e restore por cliente naturais. | Custo e operação crescem com o número de clientes; atualização e monitoramento multiplicados. |
+| B. Banco por tenant, mesma aplicação | Isolamento forte de dados; restore por cliente; o código só resolve a conexão por tenant. | Migrações e pool de conexões por banco; o job `migrate` vira laço; o advisory lock é por banco (pode ser vantagem); o custo cresce com os tenants. |
+| C. Schema por tenant | Isolamento médio. | **Conflita com o schema por módulo** (seriam tenants × módulos schemas); proteção do migrador e privilégios ficam complexos. Não recomendado aqui. |
+| D. Schema compartilhado com `TenantId` em toda tabela, filtro global do EF e Row-Level Security do PostgreSQL como segunda barreira | Uma implantação, custo baixo por cliente; escala para muitos clientes pequenos. | Mudança em todos os módulos, contratos, índices, chaves de consistência e testes de isolamento; erro de filtro vira vazamento entre clientes; restore por cliente é difícil. |
+
+**Recomendação:**
+- **A** para poucos clientes grandes ou com exigência contratual de isolamento.
+- **D**, com RLS obrigatória, se o produto precisar de muitos clientes pequenos. Isso é projeto próprio, com matriz de testes de isolamento e revisão de cada invariante (inclusive `ADR-004` e `ADR-009`).
+- **B** como meio-termo, quando o isolamento de dados importar mais que o custo.
+- **Não implementar sem decisão de produto:** o template continua de uma organização só.
+
+**Condição para decidir:**
+- o modelo comercial (quantos clientes e de que tamanho);
+- as exigências contratuais de isolamento e residência de dados;
+- a necessidade de restaurar um cliente sem afetar os outros.
+
 ## Referências de implementação
 
 - [EF Core: resiliência e commit indeterminado](https://learn.microsoft.com/en-us/ef/core/miscellaneous/connection-resiliency).

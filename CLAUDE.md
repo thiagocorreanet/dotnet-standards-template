@@ -195,7 +195,7 @@ Integração e testes funcionais sobem PostgreSQL real por Testcontainers; Docke
 |---|---|
 | Escrever ou revisar código C# | [`docs/dotnet-practices.md`](docs/dotnet-practices.md) |
 | Decidir onde uma regra mora ou se um padrão se justifica | [`docs/architecture-practices.md`](docs/architecture-practices.md) |
-| Entender por que a base é assim | [`docs/architecture.md`](docs/architecture.md) (ADR-001 a ADR-007) |
+| Entender por que a base é assim | [`docs/architecture.md`](docs/architecture.md) (ADR-001 a ADR-010 aceitos; ADR-011 a ADR-015 propostos) |
 | Criar um módulo novo ou remover o exemplo | [`docs/extending.md`](docs/extending.md) |
 | Autenticação, autorização, privacidade | [`docs/security.md`](docs/security.md) |
 | Rodar, diagnosticar, operar, restaurar | [`docs/runbooks.md`](docs/runbooks.md) |

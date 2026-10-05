@@ -5,7 +5,7 @@ Guia de consulta para decidir **onde** uma responsabilidade mora, **quando** um 
 Complementa três documentos, sem repeti-los:
 
 - [`CLAUDE.md`](../CLAUDE.md) — contrato de trabalho e invariantes.
-- [`architecture.md`](architecture.md) — as decisões já tomadas (ADR-001 a ADR-007) e suas consequências.
+- [`architecture.md`](architecture.md) — as decisões já tomadas (ADR-001 a ADR-010) e suas consequências, e as propostas ainda em aberto (ADR-011 a ADR-015: jobs agendados, arquivos, cache, idempotência de cliente, multi-tenancy).
 - [`dotnet-practices.md`](dotnet-practices.md) — como escrever o código do dia a dia.
 
 Aqui está o raciocínio que liga os três: como aplicar princípios de arquitetura a um monolito modular real, com fronteira transacional explícita, Outbox e autorização por recurso.
