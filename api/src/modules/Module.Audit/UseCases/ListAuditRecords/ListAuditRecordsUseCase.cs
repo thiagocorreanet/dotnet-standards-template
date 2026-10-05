@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Module.Audit.Domain;
 using Module.Audit.Shared;
 using Shared.Contracts.Common;
 using Shared.Data.Extensions;
@@ -52,19 +53,28 @@ internal sealed class ListAuditRecordsUseCase(AuditDbContext db) : IUseCase<List
             query = query.Where(r => r.OccurredOn <= request.OccurredUntil.Value);
         }
 
-        var descending = request.Direction == SortDirection.Desc;
-        var ordered = request.SortBy?.ToLowerInvariant() switch
-        {
-            "module" => descending ? query.OrderByDescending(x => x.Module).ThenByDescending(x => x.Id) : query.OrderBy(x => x.Module).ThenBy(x => x.Id),
-            "entidadenome" => descending ? query.OrderByDescending(x => x.EntityName).ThenByDescending(x => x.Id) : query.OrderBy(x => x.EntityName).ThenBy(x => x.Id),
-            "operation" => descending ? query.OrderByDescending(x => x.Operation).ThenByDescending(x => x.Id) : query.OrderBy(x => x.Operation).ThenBy(x => x.Id),
-            "usuarionome" => descending ? query.OrderByDescending(x => x.UserName).ThenByDescending(x => x.Id) : query.OrderBy(x => x.UserName).ThenBy(x => x.Id),
-            _ => descending ? query.OrderByDescending(x => x.OccurredOn).ThenByDescending(x => x.Id) : query.OrderBy(x => x.OccurredOn).ThenBy(x => x.Id)
-        };
+        var ordered = Sort(query, request.SortBy, request.Direction);
         var page = await ordered
             .Select(r => new ListAuditRecordsItemResponse(r.Id, r.Module, r.EntityName, r.EntityId, r.Operation, r.UserName, r.TraceId, r.OccurredOn))
             .ToPagedResultAsync(new PagedRequest(request.Page, request.PageSize), cancellationToken);
 
         return page;
+    }
+
+    /// <summary>
+    /// Ordenação estável (desempate por Id) pelos campos que o validator aceita, sem diferenciar maiúsculas.
+    /// Campo ausente ou desconhecido ordena por <c>occurredOn</c>.
+    /// </summary>
+    internal static IOrderedQueryable<AuditRecord> Sort(IQueryable<AuditRecord> query, string? sortBy, SortDirection direction)
+    {
+        var descending = direction == SortDirection.Desc;
+        return sortBy?.ToLowerInvariant() switch
+        {
+            "module" => descending ? query.OrderByDescending(x => x.Module).ThenByDescending(x => x.Id) : query.OrderBy(x => x.Module).ThenBy(x => x.Id),
+            "entityname" => descending ? query.OrderByDescending(x => x.EntityName).ThenByDescending(x => x.Id) : query.OrderBy(x => x.EntityName).ThenBy(x => x.Id),
+            "operation" => descending ? query.OrderByDescending(x => x.Operation).ThenByDescending(x => x.Id) : query.OrderBy(x => x.Operation).ThenBy(x => x.Id),
+            "username" => descending ? query.OrderByDescending(x => x.UserName).ThenByDescending(x => x.Id) : query.OrderBy(x => x.UserName).ThenBy(x => x.Id),
+            _ => descending ? query.OrderByDescending(x => x.OccurredOn).ThenByDescending(x => x.Id) : query.OrderBy(x => x.OccurredOn).ThenBy(x => x.Id),
+        };
     }
 }

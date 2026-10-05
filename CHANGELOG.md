@@ -23,6 +23,9 @@ Primeira versão distribuída como pacotes. Projetos gerados antes dela têm `Sh
 - `Oidc:AllowedRoles` configurado substitui a lista padrão; antes, o binder acrescentava os valores aos três perfis padrão.
 - Contratos dos módulos de exemplo saíram de `Shared.Contracts` para `Shared.Contracts.Modules`, que fica no projeto.
 
+### Corrigido
+- Listagem de auditoria: `sortBy=entityName` e `sortBy=userName`, aceitos pelo validator e documentados no OpenAPI, eram ignorados e ordenavam por `occurredOn`. Agora ordenam pelo campo pedido.
+
 ### Removido
 - `IModuleAccessPolicy`.
 - Log `Information` de toda paginação em `PagingExtensions`.
