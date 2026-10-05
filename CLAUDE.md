@@ -23,8 +23,9 @@ Não é arquitetura em camadas por projeto (`Domain`/`Application`/`Infrastructu
 api/src/hosts/Host.Api          composição, comandos migrate e bootstrap-identity
 api/src/modules/Module.<Name>   um módulo: Domain/, Shared/, UseCases/<Name>/
 api/src/shared/Shared.Contracts contratos entre módulos, eventos, ICurrentUser, PagedResult
-api/src/shared/Shared.Data      ModuleDbContext, BaseEntity, interceptors, Outbox, migrações
-api/src/shared/Shared.Http      IUseCase, IEndpoint, decorators, Result/Error, validação
+api/src/shared/Shared.Kernel    Result/Error, BaseEntity e interfaces de entidade; sem ASP.NET nem EF
+api/src/shared/Shared.Data      ModuleDbContext, interceptors, Outbox, migrações
+api/src/shared/Shared.Http      IUseCase, IEndpoint, IAccessPolicy, decorators, validação
 api/src/shared/Shared.Messaging OutboxProcessor, OutboxProbe, publicação in-process
 api/src/shared/Shared.Observability  Serilog, OTel, sanitização de logs e traces
 api/src/shared/Shared.WebHost   pipeline HTTP, OIDC, descoberta de módulos, OpenAPI/Scalar
@@ -39,10 +40,10 @@ Dentro de um módulo:
 ```text
 Module.<Name>/
   Domain/                    entidades, value objects, erros do módulo
-  Shared/                    DbContext, IModule, IModuleAccessPolicy, telemetria, handlers
+  Shared/                    DbContext, IModule, telemetria, handlers, regras de acesso comuns
   Shared/Configurations/     IEntityTypeConfiguration por entidade
   Shared/Migrations/         migrações EF do schema do módulo
-  UseCases/<Name>/           Endpoint, Request, Response, UseCase, Validator
+  UseCases/<Name>/           Endpoint, Request, Response, UseCase, Validator, AccessPolicy
 ```
 
 ## Invariantes
@@ -50,10 +51,10 @@ Module.<Name>/
 Estas regras protegem correção, segurança ou integridade dos dados. Quebrar qualquer uma é defeito, não preferência de estilo.
 
 1. **Módulo não conhece módulo.** Um `Module.*` referencia apenas `Shared.*`. Comunicação síncrona usa interfaces de `Shared.Contracts`; assíncrona usa evento de integração. Nunca HTTP local entre módulos do mesmo processo, nunca entidade EF ou `IQueryable` atravessando o contrato.
-2. **`Domain/` não depende de `UseCases/` nem de `Shared/` do módulo.** A regra de negócio não conhece EF Core, HTTP nem o container.
+2. **`Domain/` só depende de `System.*`, `Shared.Kernel` e `Shared.Contracts`.** Não conhece `UseCases/` nem `Shared/` do módulo, EF Core, ASP.NET Core, HTTP nem o container. O `Shared.Kernel` também não referencia ASP.NET Core nem EF Core; os testes de arquitetura garantem as duas coisas.
 3. **Exatamente um `DbContext` por módulo.** `AddUseCasesFromAssembly` resolve o contexto com `Single(...)`; um segundo `DbContext` no assembly quebra a composição em runtime, não em compilação.
 4. **Toda escrita de negócio é um caso de uso marcado com `[Command("consistency-key")]`.** A decoração transacional abre a transação e adquire o advisory lock **antes** de qualquer leitura ou validação de invariante.
-5. **Autorização de recurso é obrigatória.** Cada módulo implementa `IModuleAccessPolicy`; execução sem policy registrada é rejeitada. `RequireAuthorization()` no endpoint é barreira adicional, não substitui a policy.
+5. **Autorização de recurso é obrigatória.** Cada caso de uso tem exatamente uma `IAccessPolicy<TRequest>` no próprio slice; sem ela, a composição falha no startup e o teste de arquitetura reprova. `RequireAuthorization()` no endpoint é barreira adicional, não substitui a policy.
 6. **Sem repositório genérico, sem Unit of Work extra, sem MediatR, sem broker, sem microsserviço.** EF Core é usado diretamente. Um teste de arquitetura recusa qualquer tipo com `Repository` no nome. Padrão novo exige driver concreto registrado em ADR.
 7. **Regra de negócio não lança exceção.** Casos de uso retornam `Result<T>` com `Error("Module.Reason", ...)`. Exceção é falha inesperada ou contrato interno violado.
 8. **Nada pessoal em telemetria ou auditoria.** Sem senha, token, documento, e-mail, payload de request ou SQL com valores. A auditoria mascara valores por padrão; `AuditValue()` é exceção explícita para dado não sensível.
@@ -72,7 +73,8 @@ Estas regras protegem correção, segurança ou integridade dos dados. Quebrar q
 | Contrato HTTP de entrada e saída | `<Name>Request`/`<Name>Response`, no mesmo diretório do caso de uso |
 | Validação de formato, tamanho e obrigatoriedade | `<Name>Validator` (FluentValidation) |
 | Rota, verbo, documentação OpenAPI | `<Name>Endpoint` |
-| Quem pode agir sobre o recurso | `Module.<Name>/Shared/<Name>AccessPolicy.cs` |
+| Quem pode agir sobre o recurso | `<Name>AccessPolicy`, no mesmo diretório do caso de uso |
+| Regra de acesso repetida entre policies (ex.: "é organizador do evento") | serviço pequeno em `Module.<Name>/Shared/`, sem classe base |
 | Mapeamento EF de uma entidade | `Module.<Name>/Shared/Configurations/` |
 | Contrato consumido por outro módulo | `Shared.Contracts/<Name>/I<Name>ModuleApi.cs` |
 | Evento publicado para outros módulos | `Shared.Contracts/<Name>/` com `[EventContract("context.fact.v1")]` |
@@ -81,7 +83,7 @@ Estas regras protegem correção, segurança ou integridade dos dados. Quebrar q
 
 ## Anatomia de um caso de uso
 
-Um diretório por caso de uso, com cinco responsabilidades: `Request`, `Response`, `Validator`, `UseCase` e `Endpoint`. Os módulos de exemplo usam um arquivo por responsabilidade; `Module.Identity` concentra as cinco em um arquivo só, por serem casos pequenos. Os testes de arquitetura exigem os sufixos de tipo e o namespace `UseCases`, não a contagem de arquivos — escolha pela legibilidade e siga o módulo em que está mexendo.
+Um diretório por caso de uso, com seis responsabilidades: `Request`, `Response`, `Validator`, `UseCase`, `Endpoint` e `AccessPolicy`. Os módulos de exemplo usam um arquivo por responsabilidade; `Module.Identity` concentra as seis em um arquivo só, por serem casos pequenos. Os testes de arquitetura exigem os sufixos de tipo e o namespace `UseCases`, não a contagem de arquivos — escolha pela legibilidade e siga o módulo em que está mexendo.
 
 ```csharp
 // CreatePersonEndpoint.cs — só adapta HTTP.
@@ -100,6 +102,19 @@ internal sealed class CreatePersonEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status409Conflict);
 }
 
+// CreatePersonAccessPolicy.cs — quem pode executar, decidido no servidor. Registrada por varredura.
+internal sealed class CreatePersonAccessPolicy(PeopleDbContext db, ICurrentUser user) : IAccessPolicy<CreatePersonRequest>
+{
+    public async Task<bool> CanExecuteAsync(CreatePersonRequest request, CancellationToken ct)
+    {
+        if (!user.IsAuthenticated || user.Id is null) return false;
+        if (user.HasRole(DefaultRoles.Administrator)) return true;
+        // false vira 403 Authorization.ResourceDenied
+        return (request.UserId is null || request.UserId == user.Id)
+            && !await db.People.TagWith("People.CreatePerson.Access").AnyAsync(p => p.UserId == user.Id, ct);
+    }
+}
+
 // CreatePersonUseCase.cs — escrita: marcada como Command.
 [Command("event-management-example")]
 internal sealed class CreatePersonUseCase(PeopleDbContext db, ICurrentUser user, ILogger<CreatePersonUseCase> logger)
@@ -115,7 +130,7 @@ internal sealed class CreatePersonUseCase(PeopleDbContext db, ICurrentUser user,
 }
 ```
 
-O registro é por varredura de assembly. Um caso de uso vira, de fora para dentro: `TelemetryUseCaseDecorator` → `TransactionalUseCaseDecorator` (só com `[Command]`) → `AuthorizedUseCaseDecorator` → seu `UseCase`. Consultas sem `[Command]` pulam a decoração transacional e rodam no escopo da requisição.
+O registro é por varredura de assembly, inclusive da policy: o `Module` não registra nada por caso de uso. Um caso de uso vira, de fora para dentro: `TelemetryUseCaseDecorator` → `TransactionalUseCaseDecorator` (só com `[Command]`) → `AuthorizedUseCaseDecorator` (a `IAccessPolicy<TRequest>` do slice) → seu `UseCase`. Consultas sem `[Command]` pulam a decoração transacional e rodam no escopo da requisição.
 
 ## Armadilhas desta base
 

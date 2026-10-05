@@ -70,6 +70,45 @@ Manifesto produtivo independente, TLS na borda, somente 443 publicada, proxies c
 
 Os dumps de demonstração comprovam restauração lógica local, não disaster recovery regional. Banco/IdP/telemetria de produção precisam de backup externo criptografado, alta disponibilidade conforme RTO, monitoramento e exercício com responsáveis. Privilégios de proprietário/DBA ainda podem alterar auditoria; imutabilidade forte exige cópia externa protegida.
 
+## ADR-008 — Autorização por caso de uso e núcleo sem infraestrutura
+
+**Título e data:** policy de acesso por slice e `Shared.Kernel`, 2026-10-05.
+
+**Problema e restrições:**
+- Cada módulo tinha uma `IModuleAccessPolicy` com `CanExecuteAsync(object request)`: um `switch` sobre o tipo do request, fora do slice e sem segurança de tipo, que crescia a cada caso de uso.
+- A ausência de policy só aparecia na primeira chamada, e o decorator resolvia as policies de todos os módulos a cada execução.
+- `Domain/` usava `Result`/`Error` de `Shared.Http` e `BaseEntity` de `Shared.Data`, projetos que dependem de ASP.NET Core e EF Core.
+- A mudança não pode alterar quem acessa o quê, nem a posição da autorização (dentro da transação e do lock nos comandos).
+
+**Decisão:**
+- Cada caso de uso tem uma `IAccessPolicy<TRequest>` no próprio diretório.
+- `AddUseCasesFromAssembly` registra a policy de cada request e interrompe a composição quando falta policy ou há mais de uma. O `AuthorizedUseCaseDecorator` mantém a posição e o erro `Authorization.ResourceDenied`.
+- `Result`, `Error`, `ErrorType`, `BaseEntity`, `IAuditableEntity`, `IEventEmitter` e `IImmutableRecord` passam para `Shared.Kernel`, que referencia apenas `Shared.Contracts` (por `IIntegrationEvent`).
+
+**Alternativas consideradas:**
+- Classe base genérica de policy: recusada, porque esconderia a ordem das verificações (autenticado, administrador, dono).
+- Manter a policy por módulo com validação de cobertura: recusada, porque mantém o `switch` sem tipo e fora do slice.
+- Mover `IIntegrationEvent` para o Kernel: recusada por mexer em todos os contratos de evento sem ganho.
+
+**Benefício esperado:**
+- Autorização legível ao lado do caso de uso.
+- Falha no startup em vez de 500 na primeira chamada.
+- Resolução de uma policy por chamada.
+- `Domain/` isolado de infraestrutura por teste.
+
+**Custos e limitações aceitos:**
+- Um arquivo a mais por slice.
+- A abertura "autenticado / administrador" se repete em várias policies, de forma deliberada.
+- Regra repetida entre policies vira serviço pequeno em `Module.<Name>/Shared/`, registrado pelo módulo.
+
+**Evidência e forma de verificar:**
+- `UseCaseConventionTests`: exatamente uma policy por caso de uso, no namespace do slice.
+- `ModuleBoundaryTests`: dependências do Domain e do Kernel.
+- `AccessPolicyCompositionTests`: falha de composição e erro 403.
+- Os testes de integração e funcionais de acesso negado passaram sem alteração. A migração preservou regras implícitas; por exemplo, `ListPeople` continua só para administrador.
+
+**Condição que justifica rever:** policies que precisem de dados de vários módulos de forma recorrente, ou necessidade de autorização declarativa (atributos) para auditoria externa de permissões.
+
 ## Referências de implementação
 
 - [EF Core: resiliência e commit indeterminado](https://learn.microsoft.com/en-us/ef/core/miscellaneous/connection-resiliency).

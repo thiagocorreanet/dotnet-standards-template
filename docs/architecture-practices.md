@@ -35,7 +35,7 @@ Aqui está o raciocínio que liga os três: como aplicar princípios de arquitet
 ## 1. Três níveis de decisão
 
 - **Essencial** — protege correção, segurança ou integridade. Não é negociável em revisão. Exemplo: autorizar o acesso ao recurso, não só ao endpoint; gravar estado e evento na mesma transação.
-- **Preferência** — bom ponto de partida desta base, ajustável com justificativa. Exemplo: organizar cada caso de uso em `UseCases/<Name>/` com as cinco responsabilidades separadas; usar `Result` em vez de exceção.
+- **Preferência** — bom ponto de partida desta base, ajustável com justificativa. Exemplo: organizar cada caso de uso em `UseCases/<Name>/` com as seis responsabilidades separadas; usar `Result` em vez de exceção.
 - **Condicional** — acrescenta custo e exige necessidade identificada. Exemplo: cache distribuído, broker externo, multi-tenancy, extração de um módulo.
 
 Essencial é a **garantia**, não a ferramenta. "Detectar edição concorrente" é essencial quando a regra exige; o token de concorrência é uma das implementações. "Coordenar invariantes entre módulos" é essencial no exemplo; o advisory lock do PostgreSQL é a implementação escolhida em ADR-004.
@@ -50,7 +50,7 @@ Antes de acrescentar qualquer abstração, explicite: o comportamento que ela pr
 1. **Descreva a operação.** Quem executa, o que entra, o que sai, quais regras valem, quais falhas são esperadas.
 2. **Localize o módulo dono.** Quem possui o dado e a regra? Se a resposta for "dois módulos", volte à seção [8](#8-entre-modulos) antes de escrever código.
 3. **Defina a fronteira.** É leitura ou escrita? Escrita entra com `[Command("chave")]`; escolha a chave pelo conjunto de invariantes, não pelo endpoint.
-4. **Defina autorização.** Perfil basta ou existe propriedade do recurso? Acrescente o caso na `IModuleAccessPolicy` do módulo antes de implementar o fluxo feliz.
+4. **Defina autorização.** Perfil basta ou existe propriedade do recurso? Escreva a `<Name>AccessPolicy` do slice antes de implementar o fluxo feliz.
 5. **Escreva o domínio primeiro.** Entidade com método nomeado, normalização, erro estável em `<Name>Errors.cs`, evento com `RecordEvent` quando houver fato a publicar.
 6. **Escreva o caso de uso.** Verificações, chamada ao domínio, `ExecuteInTransactionAsync`, retorno `Result`.
 7. **Escreva request, validator e endpoint.** Só formato no validator; só transporte e documentação no endpoint.
@@ -63,11 +63,11 @@ Fluxo típico de uma escrita, já implementado pela base:
 ```text
 HTTP → autenticação OIDC → limite por usuário → policy de perfil do endpoint
      → validação (FluentValidation) → decoração transacional (BEGIN + advisory lock)
-     → policy de recurso do módulo → caso de uso → domínio
+     → policy de recurso do caso de uso → caso de uso → domínio
      → estado + Outbox + CommandReceipt → COMMIT
 ```
 
-Leituras passam por autenticação, policy do módulo e telemetria, sem transação nem lock. Não crie etapas artificiais numa consulta simples.
+Leituras passam por autenticação, policy do caso de uso e telemetria, sem transação nem lock. Não crie etapas artificiais numa consulta simples.
 
 <a id="3-proporcao"></a>
 ## 3. Por que esta estrutura e quando ela deixa de servir
@@ -93,7 +93,8 @@ Microsserviço exige justificativa que compense rede, falha parcial, contratos, 
 ```text
 Host.Api ──────────────► Module.*            (descoberta de assemblies Module.*.dll)
 Host.Api ──────────────► Shared.WebHost, Shared.Data, Shared.Messaging, Shared.Observability
-Module.<Name> ─────────► Shared.Contracts, Shared.Data, Shared.Http, Shared.Observability
+Module.<Name> ─────────► Shared.Contracts, Shared.Kernel, Shared.Data, Shared.Http, Shared.Observability
+Module.<Name>/Domain ──► somente Shared.Kernel e Shared.Contracts (além de System.*)
 Module.<Name> ──╳─────► Module.<Other>       (proibido; teste de arquitetura falha)
 Module.<Name>/Domain ──╳─────► UseCases/, Shared/  (proibido; teste de arquitetura falha)
 Shared.* ──────╳─────► Module.*              (infraestrutura não conhece negócio)
@@ -122,8 +123,8 @@ Contratos vivem junto de quem precisa deles: `IPeopleModuleApi` está em `Shared
 | Princípio | Aplicação útil nesta base | Exagero a evitar |
 |---|---|---|
 | SRP | Separar transporte (endpoint), coordenação (caso de uso), regra (domínio) e adaptação (módulo) | Criar uma classe por linha, ou confundir responsabilidade com número de métodos |
-| OCP | Ponto de extensão identificado: `IModule`, `IModuleAccessPolicy`, `IIntegrationEventHandler` | Sistema de plug-ins para variação imaginada |
-| LSP | Todo `IModuleAccessPolicy` decide de verdade; todo `IUseCase` retorna `Result`, não lança para regra | Implementar contrato com operação essencial jogando `NotSupportedException` |
+| OCP | Ponto de extensão identificado: `IModule`, `IAccessPolicy<TRequest>`, `IIntegrationEventHandler` | Sistema de plug-ins para variação imaginada |
+| LSP | Toda `IAccessPolicy<TRequest>` decide de verdade; todo `IUseCase` retorna `Result`, não lança para regra | Implementar contrato com operação essencial jogando `NotSupportedException` |
 | ISP | Contrato de módulo expõe o mínimo: `IPeopleModuleApi` devolve resumo com id, nome e e-mail de pessoas ativas | Interface que publica `DbSet` ou `IQueryable` e promete independência que não entrega |
 | DIP | Módulo depende de `Shared.Contracts`; a implementação é registrada pelo dono | `IClasse` para toda classe, inclusive tipo interno estável |
 
@@ -140,7 +141,7 @@ Coloque a regra no lugar que consegue garanti-la em **todos** os caminhos de exe
 |---|---|---|
 | Formato da entrada | Campo obrigatório, tamanho, e-mail válido, CPF com dígitos corretos | `*Validator` (FluentValidation), filtro do endpoint |
 | Permissão de perfil | Só administrador altera roles | `RequireAuthorization` / role no endpoint |
-| Permissão sobre o recurso | Só o dono edita a própria pessoa | `IModuleAccessPolicy`, dentro da transação nos comandos |
+| Permissão sobre o recurso | Só o dono edita a própria pessoa | `IAccessPolicy<TRequest>` do slice, dentro da transação nos comandos |
 | Invariante do agregado | Capacidade não pode ficar abaixo de confirmados | Método do domínio |
 | Coordenação | Carregar, aplicar, publicar evento, persistir | Caso de uso |
 | Invariante persistida | Unicidade de e-mail, não sobreposição de sala | Índice único, constraint, exclusão temporal |
@@ -223,7 +224,7 @@ Um caso de uso, um endpoint, dentro do grupo do módulo (`api/v1/<route>`), com 
 |---|---|---|
 | Entrada inválida | 400 | Filtro de validação (`ValidationProblemDetails`) |
 | Credencial ausente ou inválida | 401 | Pipeline OIDC ou `ErrorType.Unauthorized` |
-| Autenticado sem permissão | 403 | `IModuleAccessPolicy` ou `ErrorType.Forbidden` |
+| Autenticado sem permissão | 403 | `IAccessPolicy<TRequest>` ou `ErrorType.Forbidden` |
 | Recurso inexistente | 404 | `ErrorType.NotFound` |
 | Conflito de estado ou unicidade | 409 | `ErrorType.Conflict` |
 | Invariante de negócio violada | 422 | `ErrorType.BusinessRule` |
@@ -264,7 +265,7 @@ O que isso implica no desenho:
 
 - **Autorização acontece em dois lugares, com papéis diferentes.** Perfil no endpoint é barreira grossa; propriedade do recurso é decisão do módulo, dentro da fronteira transacional. Um identificador válido na URL não prova permissão.
 - **A API decide, o IdP não.** Roles vêm do client da API e de uma allowlist; claims internas recebidas são removidas. Remoção de role apenas no IdP leva até 300 s mais o skew para valer; mudança urgente exige também corte local.
-- **Falha fechada.** Execução sem policy registrada é rejeitada; policy que não reconhece o request nega.
+- **Falha fechada.** Caso de uso sem policy derruba a composição no startup e reprova o teste de arquitetura; a policy nega por padrão quando não reconhece o contexto.
 - **Privacidade é restrição de arquitetura, não filtro no final.** Auditoria mascara valores por padrão; telemetria não exporta payload, SQL com valores nem stack livre. `AuditValue()` é exceção explícita para dado não sensível e de cardinalidade controlada.
 - **Single-organization por decisão.** Multi-tenancy toca entidades, contratos, índices, policies, dados históricos e testes de isolamento. É um projeto, não uma claim.
 

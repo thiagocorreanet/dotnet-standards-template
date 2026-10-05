@@ -12,7 +12,9 @@ Contrato de trabalho completo: `CLAUDE.md`. Guias de apoio: `docs/architecture-p
 - Não registre senhas, tokens, documentos ou payloads pessoais em telemetria/auditoria.
 - Toda escrita de negócio entra na fronteira transacional antes de ler/validar invariantes. Retries reexecutam com escopo/DbContext novos e verificam commit indeterminado.
 - Outbox tem entrega pelo menos uma vez, claim token, confirmação condicional e consumidores idempotentes.
-- Casos de uso ficam em `UseCases/<Name>/`; domínio em `Domain/`; infraestrutura do módulo em `Shared/`.
+- Casos de uso ficam em `UseCases/<Name>/` (Endpoint, Request, Response, Validator, UseCase e AccessPolicy); domínio em `Domain/`; infraestrutura do módulo em `Shared/`.
+- `Domain/` só depende de `System.*`, `Shared.Kernel` e `Shared.Contracts`; o `Shared.Kernel` não referencia ASP.NET Core nem EF Core.
+- Cada caso de uso tem exatamente uma `IAccessPolicy<TRequest>` no próprio slice; sem ela a composição falha no startup. Regra de acesso repetida vira serviço pequeno em `Module.<Name>/Shared/`, sem classe base.
 - Use EF Core direto, contratos explícitos, FluentValidation e Result/ProblemDetails. Não acrescentar broker, microserviços ou repositório genérico sem driver.
 - Testes de segurança, concorrência e resiliência usam PostgreSQL real em Testcontainers.
 - Configuração local e produtiva são independentes. Não publicar banco, OTLP ou gerenciamento em produção; não oferecer segredo padrão produtivo.

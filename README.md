@@ -41,7 +41,7 @@ flowchart LR
     Collector --> Backend["Local: Prometheus, Tempo, Loki and Grafana<br/>Production: OTLP backend chosen by operations"]
 ```
 
-Each module exposes an `IModule` class with its endpoints, exactly one `DbContext` and one `IModuleAccessPolicy`. Discovery is assembly scanning in `Shared.WebHost`, so removing the example modules takes no change to the core. The API stores no user password and no signing key: it validates the RSA signature, the issuer, the audience and the token lifetime, and refuses a valid token that has no active local binding.
+Each module exposes an `IModule` class with its endpoints, exactly one `DbContext`, and every use case carries its own `IAccessPolicy<TRequest>` in its slice; a use case without one stops the host at startup. Discovery is assembly scanning in `Shared.WebHost`, so removing the example modules takes no change to the core. The API stores no user password and no signing key: it validates the RSA signature, the issuer, the audience and the token lifetime, and refuses a valid token that has no active local binding.
 
 ## Module boundary
 
@@ -80,7 +80,7 @@ sequenceDiagram
     T->>X: command with a consistency key
     X->>PG: BEGIN and advisory lock on the key
     X->>A: already under transaction and lock
-    A->>A: module policy decides on the resource and its owner
+    A->>A: use case policy decides on the resource and its owner
     A->>U: authorized
     U->>PG: state, events in the Outbox and CommandReceipt
     X->>PG: COMMIT
@@ -92,7 +92,7 @@ The order matters: the lock is taken before any read, invariant check or authori
 
 A transient failure drops the scope and repeats everything from authorization on, with a fresh `DbContext` (3 attempts by default). A use case therefore cannot hold state between attempts or cause an external effect; the intent goes to the Outbox instead. If the commit confirmation fails, a new connection looks for the `CommandReceipt` written in the same transaction. Without that proof the answer is 503, an indeterminate result: the base declares neither rollback nor success.
 
-Queries without `[Command]` skip the transactional decoration and run in the request scope, but they still go through the module policy.
+Queries without `[Command]` skip the transactional decoration and run in the request scope, but they still go through their access policy.
 
 ## Events and Outbox
 
@@ -184,7 +184,8 @@ api/
   src/modules/Module.Audit     append-only administrative query
   src/modules/Module.*         optional business modules
   src/shared/Shared.Contracts  contracts, identity and events
-  src/shared/Shared.Http       use cases, validation and transaction
+  src/shared/Shared.Kernel     Result/Error and entity base types, no ASP.NET or EF
+  src/shared/Shared.Http       use cases, access policies, validation and transaction
   src/shared/Shared.Data       EF, auditing, Outbox and migrations
   src/shared/Shared.Messaging  in-process delivery and processing
   src/shared/Shared.Observability logs, metrics and traces

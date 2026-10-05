@@ -13,7 +13,7 @@ Monolito modular .NET 10, casos de uso verticais, EF Core direto, PostgreSQL e O
 | D1 / reutilização | dotnet new, referência entre módulos proibida, geração sem 4 módulos/contratos de exemplo | Implementado; script test-template executa as quatro suítes nos dois modos |
 | SEG-01 | Compose produtivo independente, somente 443, segredos por arquivo, imagens por digest; validate-production | Implementado; promover exige valores/infra reais |
 | SEG-02 | KnownProxies explícitos, ForwardLimit=1, limite por usuário resiste XFF forjado | Implementado; validar topologia real do proxy |
-| SEG-03 | PeopleAccessPolicy restringe dados pessoais ao titular/admin; binding interno | Implementado; teste IDOR e cenários funcionais |
+| SEG-03 | Policies de People por caso de uso (`UseCases/*/<Name>AccessPolicy`) restringem dados pessoais ao titular/admin; binding interno | Implementado; teste IDOR e cenários funcionais |
 | SEG-04 | Policies de inscrição, cancelamento, certificado, proprietário de evento/palestra | Implementado; ConsistencyAndOwnershipTests |
 | SEG-05 | Access token até 300 s, corte/desativação local por request, revogação documentada | Implementado no contrato; role no IdP isoladamente tem janela de token |
 | SEG-06 | Remoção de seed de credenciais/perfis; bootstrap só em tabela vazia | Implementado; teste de não reelevação |

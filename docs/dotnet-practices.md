@@ -65,7 +65,7 @@ Nome em inglês, texto exibido em português. Não misture: `MensagemErro`, `Cre
 - Ações explícitas em métodos: `CreatePerson`, `MarkProcessedAsync`, `CanExecuteAsync`.
 - Investigue `Manager`, `Helper`, `Data` e `Process` quando ocultarem a responsabilidade.
 
-Sufixos obrigatórios por convenção da base, verificados em `Tests.Architecture`: `*UseCase`, `*Endpoint`, `*Validator`, `*DbContext`, `*Module`, `*AccessPolicy`, `*ModuleApi`. `*Repository` é proibido. Os testes cobrem o sufixo do tipo e o namespace `UseCases`, não quantos arquivos você usa: os módulos de exemplo separam um arquivo por responsabilidade e `Module.Identity` concentra as cinco num arquivo só.
+Sufixos obrigatórios por convenção da base, verificados em `Tests.Architecture`: `*UseCase`, `*Endpoint`, `*Validator`, `*DbContext`, `*Module`, `*AccessPolicy`, `*ModuleApi`. `*Repository` é proibido. Os testes cobrem o sufixo do tipo e o namespace `UseCases`, não quantos arquivos você usa: os módulos de exemplo separam um arquivo por responsabilidade e `Module.Identity` concentra as seis num arquivo só. Todo caso de uso precisa de exatamente uma `IAccessPolicy<TRequest>` no namespace do próprio slice.
 
 ### Estilo
 
@@ -142,7 +142,7 @@ Escolha de tipos:
 <a id="6-dominio"></a>
 ## 6. Domínio: entidades que protegem transições
 
-Entidades principais herdam de `BaseEntity`, que fornece PK Guid v7, campos de auditoria, soft delete e acúmulo de eventos de integração. `Domain/` não conhece EF Core, ASP.NET Core nem o container — e um teste de arquitetura garante que também não conheça `UseCases/` nem `Shared/` do próprio módulo.
+Entidades principais herdam de `BaseEntity`, que fornece PK Guid v7, campos de auditoria, soft delete e acúmulo de eventos de integração. `BaseEntity`, `Result` e `Error` vêm de `Shared.Kernel`. `Domain/` só depende de `System.*`, `Shared.Kernel` e `Shared.Contracts`: não conhece EF Core, ASP.NET Core, o container, `UseCases/` nem `Shared/` do próprio módulo, e os testes de arquitetura garantem isso.
 
 Padrão de entidade:
 
@@ -192,7 +192,7 @@ Registro por varredura de assembly (`AddUseCasesFromAssembly`), sempre `scoped`.
 ```text
 TelemetryUseCaseDecorator
   └─ TransactionalUseCaseDecorator   (apenas com [Command])
-       └─ AuthorizedUseCaseDecorator (IModuleAccessPolicy do módulo)
+       └─ AuthorizedUseCaseDecorator (IAccessPolicy<TRequest> do slice)
             └─ SeuUseCase
 ```
 
@@ -259,7 +259,7 @@ Três mecanismos, com papéis distintos:
 | Situação | Mecanismo | Resposta |
 |---|---|---|
 | Formato, obrigatoriedade, tamanho, faixa | FluentValidation via `WithValidation<TRequest>()` | 400 com `ValidationProblemDetails` |
-| Acesso ao recurso negado | `IModuleAccessPolicy` | 403 `Authorization.ResourceDenied` |
+| Acesso ao recurso negado | `IAccessPolicy<TRequest>` do slice | 403 `Authorization.ResourceDenied` |
 | Desfecho de negócio esperado | `Result` + `Error` | Status conforme `ErrorType` |
 | Ausência normal em busca | `Error.NotFound` ou tipo anulável interno | 404 |
 | Uso inválido de API interna | Guard e exceção de argumento/estado | 500 sanitizado |
@@ -319,24 +319,30 @@ Alteração de nome de campo, tipo, nulabilidade, valor de enum ou semântica é
 
 Autenticar identifica; autorizar decide. Keycloak/OIDC emite o token; a API valida assinatura, issuer, audience, expiração e tipo, e resolve `(issuer, subject)` para o Guid interno. Token autenticado sem vínculo local ativo não entra.
 
-`[Authorize]` e roles no endpoint são barreira de perfil. **Propriedade e contexto do recurso são decididos pela `IModuleAccessPolicy` do módulo**, que roda dentro da fronteira transacional nos comandos:
+`[Authorize]` e roles no endpoint são barreira de perfil. **Propriedade e contexto do recurso são decididos pela `IAccessPolicy<TRequest>` do caso de uso**, que fica no diretório do slice e roda dentro da fronteira transacional nos comandos:
 
 ```csharp
-internal sealed class PeopleAccessPolicy(PeopleDbContext db, ICurrentUser user) : IModuleAccessPolicy
+// UseCases/GetPerson/GetPersonAccessPolicy.cs
+internal sealed class GetPersonAccessPolicy(PersonOwnership ownership, ICurrentUser user) : IAccessPolicy<GetPersonRequest>
 {
-    public Assembly ModuleAssembly => typeof(PeopleModule).Assembly;
-
-    public async Task<bool> CanExecuteAsync(object request, CancellationToken ct)
+    public async Task<bool> CanExecuteAsync(GetPersonRequest request, CancellationToken ct)
     {
         if (!user.IsAuthenticated || user.Id is null) return false;
         if (user.HasRole(DefaultRoles.Administrator)) return true;
-        var id = request switch { GetPersonRequest r => r.PersonId, /* ... */ _ => Guid.Empty };
-        return id != Guid.Empty && await db.People.AnyAsync(p => p.Id == id && p.UserId == user.Id, ct);
+        return await ownership.IsOwnerAsync(request.PersonId, ct);
     }
+}
+
+// Shared/PersonOwnership.cs — regra repetida em Get/Update/DeletePerson vira um serviço pequeno, não uma classe base.
+internal sealed class PersonOwnership(PeopleDbContext db, ICurrentUser user)
+{
+    public async Task<bool> IsOwnerAsync(Guid personId, CancellationToken ct) =>
+        personId != Guid.Empty
+        && await db.People.TagWith("People.Access.Owner").AnyAsync(p => p.Id == personId && p.UserId == user.Id, ct);
 }
 ```
 
-Ao acrescentar um caso de uso, acrescente o caso correspondente na policy. Um `switch` que não reconhece o request retorna `Guid.Empty` e nega — falha fechada, mas o teste de IDOR é obrigatório mesmo assim.
+A policy é registrada por varredura junto com o caso de uso; o `Module` só registra os serviços comuns de acesso, como `PersonOwnership`. Caso de uso sem policy, ou com duas, derruba a composição no startup e reprova `UseCaseConventionTests` — falha fechada. Mesmo assim, o teste de IDOR é obrigatório: a policy existir não prova que ela decide certo.
 
 Demais controles:
 
@@ -503,7 +509,7 @@ Marque como não aplicável o que estiver fora do escopo.
 - [ ] Cada abstração nova resolve um problema concreto e não reintroduz padrão recusado pela base.
 - [ ] Escrita de negócio está marcada com `[Command]` e com a chave de consistência correta.
 - [ ] O caso de uso não tem efeito externo, estado retido nem exceção para regra de negócio.
-- [ ] A access policy cobre o novo request; há teste de acesso indevido.
+- [ ] O caso de uso tem sua `<Name>AccessPolicy` no slice; há teste de acesso indevido.
 - [ ] Invariante persistida tem constraint ou índice único.
 - [ ] Consultas projetam o necessário, têm ordenação estável, `TagWith` constante e tracking adequado.
 - [ ] Nenhum `ExecuteUpdate`/`ExecuteDelete` em domínio sem compensar auditoria e eventos.
