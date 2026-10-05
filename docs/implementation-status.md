@@ -19,7 +19,7 @@ Monolito modular .NET 10, casos de uso verticais, EF Core direto, PostgreSQL e O
 | SEG-06 | Remoção de seed de credenciais/perfis; bootstrap só em tabela vazia | Implementado; teste de não reelevação |
 | SEG-07 | Auditoria CRUD/remoção física/chave composta, ator interno, append-only DML; Keycloak admin events | Parcial: exportar eventos IdP e diffs sanitizados antes/depois de roles |
 | SEG-08 | Client PKCE, refresh rotation e roteiro de segurança de frontend | Não implementado no navegador: pedido atual é API; falta sessão/cache/CSP real |
-| SEG-09 | Limitador IP pré-JWT + usuário pós-autenticação; body/headers limitados | Implementado; limite global multi-réplica é da borda |
+| SEG-09 | Limitador IP pré-JWT + usuário pós-autenticação com limites distintos para autenticado e anônimo, políticas nomeadas por endpoint, Retry-After do limiter e health checks isentos; body/headers limitados | Implementado; RateLimitingTests; limite global multi-réplica é da borda |
 | SEG-10 | Minimização, mascaramento default, sem exceções/SQL brutos, acesso administrativo, consulta pública reduzida | Parcial: ciclo completo de anonimização/eliminação/retenção legal/backups depende da política |
 | REL-01 | Retry com contexto novo, lock antes das leituras, receipt e verificação de commit | Implementado; TransactionTests antes da persistência, entre Save/commit e ACK perdido, uma gravação/evento |
 | REL-02 | Lock compartilhado entre escritores, capacidade efetiva fail-closed | Implementado; 20 solicitações para 1 vaga geram 1 confirmação |
@@ -71,6 +71,20 @@ O relatório histórico não deve ser interpretado como aceite irrestrito. A atu
 | R6 — recuperação real | Restore lógico incluído no workflow operacional | Não equivale a backup externo, restore funcional completo, upgrade anterior nem RPO/RTO produtivos |
 
 O fluxo de cobertura usa `api/coverage.runsettings`: exclui testes, migrações e código gerado em obj, mantendo host, Shared e módulos de aplicação. Os percentuais não incluem os processos Docker dos smokes. Os gates são pisos iniciais explícitos, não uma certificação de qualidade total; não reduzi-los para acomodar regressões.
+
+## Rate limiting por perfil e políticas nomeadas — 05/10/2026
+
+- O limite global separa as partições `user:{id interno}` e `ip:{ip}`, com `RateLimiting:AuthenticatedPermitLimit` e `RateLimiting:AnonymousPermitLimit`. `RateLimiting:PermitLimit` continua como padrão dos dois. As faixas são validadas no startup, também para `IngressPermitLimit`, `WindowSeconds` e as políticas nomeadas.
+- `Retry-After` vem do metadado da lease, em segundos inteiros, no limite global, nas políticas nomeadas e no ingresso (antes era "60" fixo no ingresso e ausente no global).
+- `/health/live` e `/health/ready` usam `DisableRateLimiting()`; o middleware de ingresso também ignora endpoints com esse metadado.
+- `AddFixedWindowRateLimitPolicy` (em `Shared.WebHost`, genérico) permite ao módulo registrar política nomeada aplicada com `RequireRateLimiting`. O módulo de teste `Module.RateLimitProbe`, referenciado só por `Tests.Integration`, exercita o padrão.
+- Evidência: `RateLimitingTests`, com quatro casos em PostgreSQL real (Testcontainers):
+  - 429 global com `Retry-After` numérico;
+  - health checks com 200 depois de estourar os limites, sem consumir o ingresso;
+  - limites distintos para anônimo e autenticado;
+  - política nomeada limitando o próprio endpoint sem afetar o global.
+- O teste existente de partição por id interno com XFF forjado continua passando.
+- Fora do verificado: comportamento com várias réplicas e atrás do proxy real; os limites seguem por réplica.
 
 ## Scalar como documentação padrão — 20/09/2026
 

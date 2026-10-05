@@ -64,7 +64,25 @@ Não implementamos exclusão genérica automática de dados de negócio/auditori
 
 ## Ameaças e controles
 
-BOLA/IDOR: policy por recurso e testes entre identidades. Falsificação de JWT/roles: validação criptográfica e allowlist. Replay de mensagem: fencing e consumidor idempotente. Abuso HTTP: limites por IP antes do JWT e por usuário após autenticação, corpo 1 MiB, timeouts. Os limitadores são por réplica; limite global exige controle na borda.
+BOLA/IDOR: policy por recurso e testes entre identidades. Falsificação de JWT/roles: validação criptográfica e allowlist. Replay de mensagem: fencing e consumidor idempotente. Abuso HTTP: limites por IP antes do JWT e por usuário (ou IP, se anônimo) após autenticação, corpo 1 MiB, timeouts. Os limitadores são por réplica; limite global exige controle na borda. Detalhes em "Rate limiting".
+
+## Rate limiting
+
+Três camadas, todas em janela fixa e **por réplica** (com N réplicas, o limite efetivo é N vezes o configurado; limite global entre réplicas é da borda):
+
+| Camada | Onde roda | Partição | Configuração (padrão) |
+|---|---|---|---|
+| Ingresso | Antes da autenticação | IP | `RateLimiting:IngressPermitLimit` (600 por minuto) |
+| Global | Depois da autenticação | `user:{id interno}` ou `ip:{ip}` | `RateLimiting:AuthenticatedPermitLimit` e `RateLimiting:AnonymousPermitLimit` por `RateLimiting:WindowSeconds` (60 s) |
+| Política nomeada | Endpoint com `.RequireRateLimiting(nome)` | `user:{id interno}` ou `ip:{ip}` | Definida pelo módulo; sobrescrita em `RateLimiting:Policies:{nome}:PermitLimit` e `WindowSeconds` |
+
+- `RateLimiting:PermitLimit` (padrão 300) continua valendo como padrão de `AuthenticatedPermitLimit` e `AnonymousPermitLimit`. Para dar ao anônimo um limite menor, defina `AnonymousPermitLimit` explicitamente na configuração do ambiente.
+- Limites fora de 1 a 100000 e janelas fora de 1 a 3600 s falham no startup.
+- A política nomeada soma-se ao limite global: a requisição precisa passar pelos dois.
+- O id do usuário vem da claim interna `app_user_id`, resolvida no servidor; claims e headers enviados pelo cliente não escolhem a partição (proxies desconhecidos não alteram o IP).
+- A resposta 429 é Problem Details (`RateLimitExceeded` no global e nas políticas, `IngressRateLimit` no ingresso). `Retry-After` vem em segundos inteiros, calculado pelo limiter; se o limiter não informar prazo, o header não é enviado.
+- `/health/live` e `/health/ready` usam `DisableRateLimiting()` e não contam em nenhuma camada: uma sonda recusada tiraria a réplica de circulação. O mesmo metadado isenta qualquer endpoint.
+- A rejeição não é registrada com IP nem id de usuário. As chaves de partição identificam pessoa ou endereço e não devem ir para log, métrica ou trace.
 
 Headers de proxy só são considerados de proxies conhecidos. HTTPS do cliente termina na borda confiável; API não publica porta produtiva. Rede interna e host Docker permanecem fronteiras confiáveis. Administrador de host/banco ou imagem comprometida ainda pode acessar dados; use mínimo privilégio, atualizações e isolamento operacional.
 

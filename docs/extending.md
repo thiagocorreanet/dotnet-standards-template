@@ -19,6 +19,20 @@ A base é single-organization. Multi-tenancy requer TenantId em entidades, contr
 9. Gere migração com a ferramenta local e revise SQL. Execute o job com credencial de migração; use somente banco novo de teste para verificar a migração. O grant de runtime usa os módulos/tabelas registrados.
 10. Acrescente testes de domínio, policy/IDOR, contrato HTTP, PostgreSQL/concorrência, Outbox e arquitetura. Rode a solução inteira.
 
+### Rate limiting por endpoint
+
+O limite global já vale para todo endpoint. Quando uma operação precisa de limite próprio (envio de convite, exportação), registre uma política nomeada no `IModule` e aplique no endpoint:
+
+```csharp
+// IModule.ConfigureServices
+builder.AddFixedWindowRateLimitPolicy("billing-export", permitLimit: 5, windowSeconds: 60);
+
+// <Name>Endpoint.Map
+group.MapPost("/exports", ...).RequireRateLimiting("billing-export");
+```
+
+A política é particionada por usuário (ou IP, se anônimo), usa a mesma resposta 429 com `Retry-After` e pode ser ajustada por ambiente em `RateLimiting:Policies:billing-export:PermitLimit` e `WindowSeconds`. Prefixe o nome com o módulo para não colidir com políticas de outros módulos. Se precisar de outro algoritmo, use `builder.Services.Configure<RateLimiterOptions>(o => o.AddPolicy(...))` com `RateLimits.PartitionKey`. Regras em [`security.md`](security.md#rate-limiting).
+
 ### O que o exemplo demonstra sobre exclusão
 
 `DeleteRoom` e `DeleteVenue` consultam os módulos consumidores antes de excluir (`IsVenueInUseAsync` e `IsRoomInUseAsync`) e recusam com `409 Venues.ResourceInUse`; `DeleteTrack` faz o mesmo com `IsTrackInUseAsync` e recusa com `409 Events.TrackInUse`. `DeleteTalk` consulta o evento para não deixar um evento publicado sem palestra ativa (`409 Talks.LastTalk`). Esse é o padrão a copiar: a verificação de referência cruzada é do caso de uso, pelo contrato do módulo dono, dentro da fronteira transacional.
