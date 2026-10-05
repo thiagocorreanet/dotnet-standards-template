@@ -382,7 +382,15 @@ Regras da base:
 
 Invariante persistida precisa de constraint no banco. "Consultar se existe e depois inserir" não impede duas requisições concorrentes; a consulta prévia serve para a mensagem de erro amigável, o índice único serve para a correção. A base usa também exclusão temporal do PostgreSQL para sobreposição de agenda no exemplo.
 
-A fronteira transacional de um comando é o advisory lock derivado da chave de `[Command]`. Escolha a chave pelo **conjunto de invariantes** que precisa ser coordenado, não pelo nome do endpoint. Todos os escritores participantes, inclusive rotinas administrativas, precisam declarar a mesma chave. O custo é serialização das escritas daquele conjunto — deliberado, não acidental.
+A fronteira transacional de um comando é o advisory lock derivado da chave de `[Command]`. Escolha a chave pelo **conjunto de invariantes** que precisa ser coordenado, não pelo nome do endpoint:
+
+| Declaração | Chave | Quando usar |
+|---|---|---|
+| `[Command]` | nome do módulo | Padrão. Invariantes do módulo sem análise mais fina. |
+| `[Command("events:{EventId}")]` | resolvida do request | A invariante depende só daquele recurso. A propriedade precisa ser `Guid` ou `string`, ter `NotEmpty` no Validator e estar preenchida antes do lock (corpo ou rota). |
+| `[Command("chave-fixa")]` | literal | Conjunto explícito, inclusive entre módulos (o exemplo usa `event-management-example`). |
+
+Placeholder que não existe no request derruba o startup e reprova `UseCaseConventionTests`. Valores `string` são comparados sem diferenciar maiúsculas; outra normalização é responsabilidade do request. Cada comando tem uma chave só. Todos os escritores participantes, inclusive rotinas administrativas, precisam declarar a mesma chave. O custo é serialização das escritas daquele conjunto — deliberado, não acidental.
 
 Limites padrão: 3 tentativas, `lock_timeout` de 10 s, comando SQL de 30 s (`CommandTransactionOptions`). A expiração não é deadline global de uma sequência arbitrária de consultas.
 

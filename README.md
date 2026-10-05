@@ -88,7 +88,7 @@ sequenceDiagram
     X-->>C: 201, or 503 when the commit cannot be verified
 ```
 
-The order matters: the lock is taken before any read, invariant check or authorization decision. Every business write is a use case marked with `[Command("key")]`, and writers that share an invariant declare the same key, which serializes those writes. That is a deliberate cost, not a design for high throughput.
+The order matters: the lock is taken before any read, invariant check or authorization decision. Every business write is a use case marked with `[Command]`. Without arguments the key is the module name; `[Command("events:{EventId}")]` locks a single resource, with placeholders read from the request; a fixed key coordinates writers across modules. Writers that share an invariant declare the same key, which serializes those writes. That is a deliberate cost, not a design for high throughput.
 
 A transient failure drops the scope and repeats everything from authorization on, with a fresh `DbContext` (3 attempts by default). A use case therefore cannot hold state between attempts or cause an external effect; the intent goes to the Outbox instead. If the commit confirmation fails, a new connection looks for the `CommandReceipt` written in the same transaction. Without that proof the answer is 503, an indeterminate result: the base declares neither rollback nor success.
 

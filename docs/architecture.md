@@ -36,7 +36,7 @@ Limites padrão: 3 tentativas, lock 10 s, comando SQL 30 s. A expiração não r
 
 Todos os comandos do exemplo usam a mesma chave PostgreSQL `event-management-example` antes de ler os módulos. Isso coordena invariantes entre DbContexts e réplicas sem transação distribuída, desde que **todas as escritas** respeitem a fronteira. Leituras cross-module enxergam commits anteriores; o mesmo lock impede alteração concorrente durante a decisão.
 
-Há custo deliberado: as escritas do exemplo são serializadas. Não prometemos alto throughput desse desenho. Uma evolução medida pode adotar locks por agregado/recurso, com ordem estável e matriz completa dos participantes.
+Há custo deliberado: as escritas do exemplo são serializadas. Não prometemos alto throughput desse desenho. Uma evolução medida pode adotar locks por agregado/recurso, com ordem estável e matriz completa dos participantes. A base passou a oferecer chave por recurso (ADR-009), mas o exemplo continua na chave compartilhada: suas invariantes atravessam módulos, e trocar a chave exige essa matriz e testes concorrentes.
 
 Defesas adicionais: exclusão temporal PostgreSQL por sala/intervalo ativo, unicidade de certificado pessoa/palestra e de inscrições ativas. Períodos adjacentes são permitidos. Local referenciado não pode desaparecer; alterações de agenda com palestras são recusadas; capacidade não pode ficar abaixo de confirmados. Certificado conserva snapshot histórico e oculta titular na consulta anônima.
 
@@ -108,6 +108,44 @@ Os dumps de demonstração comprovam restauração lógica local, não disaster 
 - Os testes de integração e funcionais de acesso negado passaram sem alteração. A migração preservou regras implícitas; por exemplo, `ListPeople` continua só para administrador.
 
 **Condição que justifica rever:** policies que precisem de dados de vários módulos de forma recorrente, ou necessidade de autorização declarativa (atributos) para auditoria externa de permissões.
+
+## ADR-009 — Chave de consistência padrão e por recurso
+
+**Título e data:** `[Command]` sem argumento e placeholders resolvidos do request, 2026-10-05.
+
+**Problema e restrições:**
+- A chave de `[Command("...")]` era uma string fixa. Não havia trava por recurso: todas as escritas com a mesma chave faziam fila numa só, mesmo sobre recursos sem relação.
+- O dev precisava inventar uma chave até para o caso comum (invariantes de um módulo só).
+- A chave errada não falha: produz corrupção sob concorrência.
+
+**Decisão:**
+- `[Command]` sem argumento usa o nome do módulo (`ModuleTelemetry.Module`, igual ao schema).
+- `[Command("events:{EventId}")]` resolve os placeholders a partir de propriedades `Guid` ou `string` do request, antes de abrir a transação.
+- O template é compilado em `AddUseCasesFromAssembly`. Placeholder inexistente, de outro tipo ou malformado falha no startup, e `UseCaseConventionTests` repete a validação.
+- A chave é resolvida uma vez por chamada; todas as tentativas e o `VerifyCommittedAsync` usam a mesma trava resolvida.
+- `Guid.Empty`, string vazia ou request nulo lançam exceção (contrato violado), sem recuar para a chave do módulo. O recuo deixaria dois comandos sobre o mesmo recurso com travas diferentes.
+- Valores `string` são normalizados para maiúsculas; outra normalização é do request.
+
+**Alternativas consideradas:**
+- Recuar para a chave do módulo quando o valor vem vazio: recusada pelo motivo acima.
+- Várias chaves por comando: adiada. Exige ordem estável de aquisição para evitar deadlock e a matriz de participantes.
+- Trocar a chave do exemplo: fora de escopo (ADR-004).
+
+**Benefício esperado:** padrão seguro sem escolha manual; paralelismo entre recursos independentes quando a invariante permite; erro de digitação no placeholder detectado no startup.
+
+**Custos e limitações aceitos:**
+- Uma chave por comando.
+- Chave por recurso não protege invariante que também depende de outro recurso.
+- Valor vazio em placeholder vira 500. Por isso a propriedade precisa de `NotEmpty` no Validator, que roda antes.
+- O `Module.Identity` passou de `[Command("identity")]` para `[Command]` (chave `Identity`). A semântica é a mesma, mas durante um deploy gradual réplicas antigas e novas usam travas diferentes até a troca terminar.
+- Chaves fixas mantêm o mesmo identificador de lock das versões anteriores.
+
+**Evidência e forma de verificar:**
+- `ConsistencyKeyLockTests` (PostgreSQL real): recursos diferentes em paralelo, mesmo recurso em fila e `[Command]` sem argumento em fila no módulo.
+- `ConsistencyKeyTests`: parsing, normalização, valores vazios e compatibilidade do lock fixo.
+- `UseCaseConventionTests`: placeholders válidos em todos os módulos.
+
+**Condição que justifica rever:** comandos que precisem coordenar dois recursos ao mesmo tempo, ou contenção medida na chave do módulo.
 
 ## Referências de implementação
 

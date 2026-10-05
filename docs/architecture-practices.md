@@ -49,7 +49,7 @@ Antes de acrescentar qualquer abstração, explicite: o comportamento que ela pr
 
 1. **Descreva a operação.** Quem executa, o que entra, o que sai, quais regras valem, quais falhas são esperadas.
 2. **Localize o módulo dono.** Quem possui o dado e a regra? Se a resposta for "dois módulos", volte à seção [8](#8-entre-modulos) antes de escrever código.
-3. **Defina a fronteira.** É leitura ou escrita? Escrita entra com `[Command("chave")]`; escolha a chave pelo conjunto de invariantes, não pelo endpoint.
+3. **Defina a fronteira.** É leitura ou escrita? Escrita entra com `[Command]` (chave = módulo), `[Command("recurso:{Id}")]` ou uma chave compartilhada; escolha pelo conjunto de invariantes, não pelo endpoint.
 4. **Defina autorização.** Perfil basta ou existe propriedade do recurso? Escreva a `<Name>AccessPolicy` do slice antes de implementar o fluxo feliz.
 5. **Escreva o domínio primeiro.** Entidade com método nomeado, normalização, erro estável em `<Name>Errors.cs`, evento com `RecordEvent` quando houver fato a publicar.
 6. **Escreva o caso de uso.** Verificações, chamada ao domínio, `ExecuteInTransactionAsync`, retorno `Result`.
@@ -166,8 +166,9 @@ Esta é a decisão arquitetural mais específica da base (ADR-003 e ADR-004) e a
 2. Liste todos os escritores que podem violá-las — incluindo outros módulos e rotinas administrativas.
 3. Se esse conjunto já é coordenado por uma chave existente, use a mesma chave.
 4. Só crie chave nova quando o conjunto for comprovadamente independente do existente.
+5. Chave por recurso (`[Command("events:{EventId}")]`) é a forma mais estreita: use quando todos os escritores da invariante tocam o mesmo recurso identificado no request. Se a regra também lê outro recurso que pode mudar em paralelo, a chave por recurso não basta.
 
-O exemplo usa uma única chave (`event-management-example`) para todos os comandos, porque as invariantes atravessam quatro módulos. Isso serializa as escritas do exemplo: custo deliberado, documentado, e não uma promessa de throughput. Uma evolução medida pode adotar locks por agregado, com ordem estável e a matriz completa de participantes — e isso é um ADR, não um ajuste local.
+O exemplo usa uma única chave (`event-management-example`) para todos os comandos, porque as invariantes atravessam quatro módulos. Isso serializa as escritas do exemplo: custo deliberado, documentado, e não uma promessa de throughput. Uma evolução medida pode adotar locks por agregado, com ordem estável e a matriz completa de participantes — e isso é um ADR, não um ajuste local. A base já resolve placeholders por recurso (ADR-009), mas com uma chave por comando: várias chaves exigiriam ordem estável de aquisição e não são suportadas.
 
 **Chave nova mal escolhida falha em silêncio.** Duas chaves diferentes para escritores da mesma invariante não produzem erro: produzem corrupção sob concorrência. Toda mudança de chave precisa de teste concorrente.
 
