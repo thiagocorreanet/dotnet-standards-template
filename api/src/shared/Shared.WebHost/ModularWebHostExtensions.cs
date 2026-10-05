@@ -153,8 +153,9 @@ public static class ModularWebHostExtensions
             app.MapGet("/", () => Results.Redirect("/scalar")).ExcludeFromDescription().AllowAnonymous();
         }
 
-        app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
-        app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") }).AllowAnonymous();
+        // Sondas de orquestrador não podem ser recusadas por limite: um 429 tiraria a réplica de circulação.
+        app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous().DisableRateLimiting();
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") }).AllowAnonymous().DisableRateLimiting();
         app.MapOperations();
 
         foreach (var module in modules)
@@ -176,17 +177,25 @@ public static class ModularWebHostExtensions
 
     private static void AddRateLimiting(WebApplicationBuilder builder)
     {
-        var limit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 300);
-        var window = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
+        // PermitLimit continua valendo como padrão dos dois limites, para não quebrar configuração existente.
+        var section = builder.Configuration.GetSection(RateLimits.Section);
+        var fallback = RateLimits.ReadPermitLimit(section, "PermitLimit", 300, "RateLimiting:PermitLimit");
+        var authenticated = RateLimits.ReadPermitLimit(section, "AuthenticatedPermitLimit", fallback, "RateLimiting:AuthenticatedPermitLimit");
+        var anonymous = RateLimits.ReadPermitLimit(section, "AnonymousPermitLimit", fallback, "RateLimiting:AnonymousPermitLimit");
+        var window = RateLimits.ReadWindowSeconds(section, "WindowSeconds", 60, "RateLimiting:WindowSeconds");
         builder.Services.AddRateLimiter(o =>
         {
             o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    ctx.User.FindFirst(OidcOptions.UserIdClaim)?.Value ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
-                    _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromSeconds(window), QueueLimit = 0 }));
+            {
+                var key = RateLimits.PartitionKey(ctx);
+                var limit = key.StartsWith("user:", StringComparison.Ordinal) ? authenticated : anonymous;
+                return RateLimitPartition.GetFixedWindowLimiter(key, _ => RateLimits.FixedWindow(limit, window));
+            });
+            // Vale para o limite global e para as políticas nomeadas dos módulos. Sem IP nem id de usuário no log.
             o.OnRejected = async (ctx, ct) =>
             {
+                RateLimits.WriteRetryAfter(ctx.HttpContext.Response, ctx.Lease);
                 ctx.HttpContext.Response.ContentType = "application/problem+json";
                 await ctx.HttpContext.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
                 {
