@@ -25,7 +25,7 @@ public sealed class RegisterUserValidator : AbstractValidator<RegisterUserReques
         RuleFor(x => x.UserEmail).NotEmpty().EmailAddress().MaximumLength(254);
     }
 }
-[Command("identity")]
+[Command]
 internal sealed class RegisterUserUseCase(IdentityDbContext db, IOptions<OidcOptions> oidc)
     : IUseCase<RegisterUserRequest, RegisterUserResponse>
 {

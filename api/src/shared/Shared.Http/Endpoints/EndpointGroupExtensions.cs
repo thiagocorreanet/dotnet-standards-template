@@ -41,7 +41,8 @@ public static class EndpointGroupExtensions
     /// envolvidos pelo decorator de telemetria do módulo, e a <see cref="IAccessPolicy{TRequest}"/> de cada um.
     /// </summary>
     /// <exception cref="InvalidOperationException">
-    /// Caso de uso sem policy, ou com mais de uma, interrompe a composição: falha no startup, não na primeira requisição.
+    /// Caso de uso sem policy, ou com mais de uma, ou <see cref="CommandAttribute"/> com placeholder inválido, interrompe a
+    /// composição: falha no startup, não na primeira requisição.
     /// </exception>
     public static IServiceCollection AddUseCasesFromAssembly(this IServiceCollection services, Assembly assembly, ModuleTelemetry telemetry) =>
         services.AddUseCasesFromTypes(assembly.GetTypes(), telemetry);
@@ -56,14 +57,15 @@ public static class EndpointGroupExtensions
                 var policyContract = typeof(IAccessPolicy<>).MakeGenericType(iface.GenericTypeArguments[0]);
                 services.TryAddScoped(policyContract, FindAccessPolicy(types, type, policyContract));
                 var decorator = typeof(TelemetryUseCaseDecorator<,>).MakeGenericType(iface.GenericTypeArguments);
+                var command = type.GetCustomAttribute<CommandAttribute>();
+                var consistencyKey = command is null ? null : ConsistencyKey.For(type, iface.GenericTypeArguments[0], command, telemetry.Module);
                 services.AddScoped(type);
                 services.AddScoped(iface, sp =>
                 {
-                    var command = type.GetCustomAttribute<CommandAttribute>();
-                    var inner = command is null ? AuthorizedExecution.Create(sp, type, iface)
+                    var inner = consistencyKey is null ? AuthorizedExecution.Create(sp, type, iface)
                         : ActivatorUtilities.CreateInstance(sp,
                             typeof(TransactionalUseCaseDecorator<,>).MakeGenericType(iface.GenericTypeArguments),
-                            type, contextType, command);
+                            type, contextType, consistencyKey);
                     return ActivatorUtilities.CreateInstance(sp, decorator, inner, telemetry);
                 });
             }

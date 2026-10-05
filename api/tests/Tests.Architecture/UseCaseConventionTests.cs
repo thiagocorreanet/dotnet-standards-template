@@ -1,3 +1,4 @@
+using System.Reflection;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using NetArchTest.Rules;
@@ -118,6 +119,32 @@ public sealed class UseCaseConventionTests
             .ToArray();
 
         violations.ShouldBeEmpty("DbContext, IModule e contratos I*ModuleApi devem usar os sufixos *DbContext, *Module e *ModuleApi");
+    }
+
+    [Theory]
+    [MemberData(nameof(ArchitectureTestData.Modules), MemberType = typeof(ArchitectureTestData))]
+    public void Commands_ShouldDeclareResolvableConsistencyKeys(System.Reflection.Assembly moduleAssembly)
+    {
+        var violations = new List<string>();
+        foreach (var type in moduleAssembly.GetTypes().Where(t => t.GetCustomAttribute<CommandAttribute>() is not null))
+        {
+            var contract = type.GetInterfaces().SingleOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IUseCase<,>));
+            if (contract is null)
+            {
+                violations.Add($"{type.Name}: [Command] fora de um IUseCase");
+                continue;
+            }
+            try
+            {
+                ConsistencyKey.For(type, contract.GenericTypeArguments[0], type.GetCustomAttribute<CommandAttribute>()!, moduleAssembly.GetName().Name!);
+            }
+            catch (InvalidOperationException exception)
+            {
+                violations.Add(exception.Message);
+            }
+        }
+
+        violations.ShouldBeEmpty("Placeholders de [Command] precisam corresponder a propriedades Guid ou string do request");
     }
 
     private static void AssertSuccess(TestResult result, string rule) =>

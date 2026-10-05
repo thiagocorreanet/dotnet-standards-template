@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,7 +12,7 @@ namespace Shared.Http.Endpoints;
 
 /// <summary>Retry da unidade completa com escopo novo e prova de commit, antes de qualquer leitura de negócio.</summary>
 internal sealed class TransactionalUseCaseDecorator<TRequest, TResponse>(
-    IServiceScopeFactory scopeFactory, Type useCaseType, Type contextType, CommandAttribute command,
+    IServiceScopeFactory scopeFactory, Type useCaseType, Type contextType, ConsistencyKey consistencyKey,
     IOptions<CommandTransactionOptions> options,
     ILogger<TransactionalUseCaseDecorator<TRequest, TResponse>> logger) : IUseCase<TRequest, TResponse>
 {
@@ -23,6 +21,8 @@ internal sealed class TransactionalUseCaseDecorator<TRequest, TResponse>(
         var operationId = Guid.CreateVersion7();
         Activity.Current?.SetTag("operation.id", operationId.ToString());
         var cfg = options.Value;
+        // Resolvida uma vez: todas as tentativas e a verificação de commit usam a mesma trava.
+        var lockId = ConsistencyKey.LockIdOf(consistencyKey.Resolve(request));
         for (var attempt = 1; ; attempt++)
         {
             await using var scope = scopeFactory.CreateAsyncScope();
@@ -34,8 +34,6 @@ internal sealed class TransactionalUseCaseDecorator<TRequest, TResponse>(
             try
             {
                 transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-                var digest = SHA256.HashData(Encoding.UTF8.GetBytes(command.ConsistencyKey));
-                var lockId = System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(digest);
                 var lockTimeout = $"{cfg.LockTimeoutSeconds}s";
                 await db.Database.ExecuteSqlInterpolatedAsync($"SELECT set_config('lock_timeout', {lockTimeout}, true)", cancellationToken);
                 await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({lockId})", cancellationToken);
@@ -62,7 +60,7 @@ internal sealed class TransactionalUseCaseDecorator<TRequest, TResponse>(
                     catch (Exception) { /* A verificação abaixo usa conexão nova e a mesma trava. */ }
                     transaction = null;
                 }
-                if (committing && await VerifyCommittedAsync(operationId, exception))
+                if (committing && await VerifyCommittedAsync(operationId, lockId, exception))
                 {
                     logger.LogWarning("Confirmação recuperada da operação {OperationId}", operationId);
                     return result!;
@@ -80,7 +78,7 @@ internal sealed class TransactionalUseCaseDecorator<TRequest, TResponse>(
         }
     }
 
-    private async Task<bool> VerifyCommittedAsync(Guid operationId, Exception commitException)
+    private async Task<bool> VerifyCommittedAsync(Guid operationId, long lockId, Exception commitException)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         try
@@ -92,8 +90,6 @@ internal sealed class TransactionalUseCaseDecorator<TRequest, TResponse>(
                     await using var scope = scopeFactory.CreateAsyncScope();
                     var db = (DbContext)scope.ServiceProvider.GetRequiredService(contextType);
                     await using var proof = await db.Database.BeginTransactionAsync(timeout.Token);
-                    var lockId = System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(
-                        SHA256.HashData(Encoding.UTF8.GetBytes(command.ConsistencyKey)));
                     // Aguarda a conclusão da transação anterior antes de interpretar ausência como rollback.
                     await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({lockId})", timeout.Token);
                     return await db.Set<CommandReceipt>().TagWith("Infrastructure.VerifyCommit")

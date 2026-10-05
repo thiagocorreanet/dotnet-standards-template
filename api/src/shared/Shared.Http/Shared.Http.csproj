@@ -4,6 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Tests.Unit" />
+    <InternalsVisibleTo Include="Tests.Architecture" />
+    <InternalsVisibleTo Include="Tests.Integration" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

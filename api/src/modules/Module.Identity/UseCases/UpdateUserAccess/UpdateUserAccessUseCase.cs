@@ -11,7 +11,7 @@ using Shared.Contracts.Common;
 namespace Module.Identity.UseCases.UpdateUserAccess;
 public sealed record UpdateUserAccessRequest(Guid UserId, bool IsActive, bool RevokeTokens);
 public sealed record UpdateUserAccessResponse(Guid Id, bool IsActive, DateTimeOffset TokensValidAfter);
-[Command("identity")]
+[Command]
 internal sealed class UpdateUserAccessUseCase(IdentityDbContext db, ICurrentUser actor, TimeProvider time)
     : IUseCase<UpdateUserAccessRequest, UpdateUserAccessResponse>
 {
