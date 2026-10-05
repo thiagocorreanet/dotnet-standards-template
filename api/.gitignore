@@ -5,3 +5,5 @@ obj/
 .idea/
 TestResults/
 *.swp
+# Gerados pelo Reqnroll a cada build; o template já os exclui.
+*.feature.cs
