@@ -2,38 +2,34 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Module.People.Shared;
+using Module.Identity.Shared;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Module.People.Migrations
+namespace Module.Identity.Migrations
 {
-    [DbContext(typeof(PeopleDbContext))]
-    partial class PeopleDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(IdentityDbContext))]
+    [Migration("20261005175020_AddInbox")]
+    partial class AddInbox
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("People")
+                .HasDefaultSchema("Identity")
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Module.People.Domain.Person", b =>
+            modelBuilder.Entity("Module.Identity.Domain.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -43,11 +39,6 @@ namespace Module.People.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -55,63 +46,51 @@ namespace Module.People.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<string>("PersonJobTitle")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasAnnotation("ModularApi:Sensitive", true);
 
-                    b.Property<string>("PersonDocument")
-                        .HasMaxLength(11)
-                        .HasColumnType("character(11)")
-                        .IsFixedLength();
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
-                    b.Property<string>("PersonEmail")
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTimeOffset>("TokensValidAfter")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("UserName")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("PersonCompany")
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<string>("PersonPhotoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("PersonShortBio")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("PersonName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<string>("PersonPhone")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("character varying(200)")
+                        .HasAnnotation("ModularApi:Sensitive", true);
 
                     b.HasKey("Id");
 
                     b.HasIndex("DeletedAt");
 
-                    b.HasIndex("PersonDocument")
-                        .IsUnique()
-                        .HasFilter("\"DeletedAt\" IS NULL AND \"PersonDocument\" IS NOT NULL");
+                    b.HasIndex("Issuer", "Subject")
+                        .IsUnique();
 
-                    b.HasIndex("PersonEmail")
-                        .IsUnique()
-                        .HasFilter("\"DeletedAt\" IS NULL");
-
-                    b.HasIndex("PersonName");
-
-                    b.HasIndex("UserId")
-                        .IsUnique()
-                        .HasFilter("\"DeletedAt\" IS NULL AND \"UserId\" IS NOT NULL");
-
-                    b.ToTable("People", "People");
+                    b.ToTable("Users", "Identity");
                 });
 
             modelBuilder.Entity("Shared.Data.Inbox.InboxMessage", b =>
@@ -130,7 +109,7 @@ namespace Module.People.Migrations
 
                     b.HasIndex("ProcessedAt");
 
-                    b.ToTable("InboxMessages", "People");
+                    b.ToTable("InboxMessages", "Identity");
                 });
 
             modelBuilder.Entity("Shared.Data.Outbox.OutboxMessage", b =>
@@ -185,7 +164,7 @@ namespace Module.People.Migrations
                     b.HasIndex("ProcessedOn", "DeadLetteredAt", "NextAttemptAt", "LockedUntil", "OccurredOn")
                         .HasDatabaseName("IX_OutboxMessages_Pending");
 
-                    b.ToTable("OutboxMessages", "People");
+                    b.ToTable("OutboxMessages", "Identity");
                 });
 
             modelBuilder.Entity("Shared.Data.Outbox.OutboxReplayAudit", b =>
@@ -209,7 +188,7 @@ namespace Module.People.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("OutboxReplayAudit", "People");
+                    b.ToTable("OutboxReplayAudit", "Identity");
                 });
 
             modelBuilder.Entity("Shared.Data.Transactions.CommandReceipt", b =>
@@ -224,7 +203,7 @@ namespace Module.People.Migrations
 
                     b.HasIndex("CommittedAt");
 
-                    b.ToTable("CommandReceipts", "People");
+                    b.ToTable("CommandReceipts", "Identity");
                 });
 #pragma warning restore 612, 618
         }

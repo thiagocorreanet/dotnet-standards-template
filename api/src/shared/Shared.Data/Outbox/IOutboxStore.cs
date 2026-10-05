@@ -10,4 +10,6 @@ public interface IOutboxStore
     Task<IReadOnlyList<DeadLetter>> ListDeadLettersAsync(CancellationToken ct);
     Task<bool> ReplayAsync(Guid id, Guid actorId, string reasonCode, CancellationToken ct);
     Task<int> PruneProcessedAsync(int retentionDays, CancellationToken ct);
+    /// <summary>Apaga, em lote, entradas da Inbox confirmadas há mais de <paramref name="retentionDays"/> dias.</summary>
+    Task<int> PruneInboxAsync(int retentionDays, CancellationToken ct);
 }

@@ -216,5 +216,6 @@ public sealed class OutboxSchedulingTests
         public Task<IReadOnlyList<DeadLetter>> ListDeadLettersAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<DeadLetter>>([]);
         public Task<bool> ReplayAsync(Guid id, Guid actorId, string reasonCode, CancellationToken ct) => Task.FromResult(false);
         public Task<int> PruneProcessedAsync(int retentionDays, CancellationToken ct) => Task.FromResult(0);
+        public Task<int> PruneInboxAsync(int retentionDays, CancellationToken ct) => Task.FromResult(0);
     }
 }
