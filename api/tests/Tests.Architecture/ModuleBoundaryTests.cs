@@ -110,7 +110,7 @@ public sealed class ModuleBoundaryTests
             .That()
             .AreClasses()
             .Should()
-            .NotHaveNameMatching(".*Repository.*|.*Repository.*")
+            .NotHaveNameMatching(".*Repository.*")
             .GetResult();
 
         AssertSuccess(result, "O acesso a dados deve usar o DbContext diretamente, sem repositórios");
