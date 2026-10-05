@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Module.Audit.Domain;
 using Module.Audit.Shared;
 using Shared.Http.Endpoints;
@@ -7,7 +6,7 @@ using Shared.Kernel.Results;
 
 namespace Module.Audit.UseCases.GetAuditRecord;
 
-internal sealed class GetAuditRecordUseCase(AuditDbContext db, ILogger<GetAuditRecordUseCase> logger) : IUseCase<GetAuditRecordRequest, GetAuditRecordResponse>
+internal sealed class GetAuditRecordUseCase(AuditDbContext db) : IUseCase<GetAuditRecordRequest, GetAuditRecordResponse>
 {
     public async Task<Result<GetAuditRecordResponse>> HandleAsync(GetAuditRecordRequest request, CancellationToken cancellationToken)
     {
@@ -22,11 +21,9 @@ internal sealed class GetAuditRecordUseCase(AuditDbContext db, ILogger<GetAuditR
 
         if (record is null)
         {
-            logger.LogInformation("Registro de auditoria {AuditRecordId} não encontrado", request.RecordId);
             return AuditErrors.RecordNotFound;
         }
 
-        logger.LogInformation("Registro de auditoria {AuditRecordId} carregado para {Module}.{EntityType}", record.Id, record.Module, record.EntityName);
         return record;
     }
 }

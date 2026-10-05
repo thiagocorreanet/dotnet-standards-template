@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Module.Venues.Domain;
 using Module.Venues.Shared;
 using Shared.Http.Endpoints;
@@ -7,7 +6,7 @@ using Shared.Kernel.Results;
 
 namespace Module.Venues.UseCases.GetVenue;
 
-internal sealed class GetVenueUseCase(VenuesDbContext db, ILogger<GetVenueUseCase> logger) : IUseCase<GetVenueRequest, GetVenueResponse>
+internal sealed class GetVenueUseCase(VenuesDbContext db) : IUseCase<GetVenueRequest, GetVenueResponse>
 {
     public async Task<Result<GetVenueResponse>> HandleAsync(GetVenueRequest request, CancellationToken cancellationToken)
     {
@@ -25,11 +24,9 @@ internal sealed class GetVenueUseCase(VenuesDbContext db, ILogger<GetVenueUseCas
 
         if (venue is null)
         {
-            logger.LogInformation("Local {VenueId} não encontrado para detalhamento", request.VenueId);
             return VenuesErrors.VenueNotFound;
         }
 
-        logger.LogInformation("Local {VenueId} carregado com {RoomCount} sala(s) e capacidade total {TotalCapacity}", venue.Id, venue.Rooms.Count, venue.VenueTotalCapacity);
         return venue;
     }
 }

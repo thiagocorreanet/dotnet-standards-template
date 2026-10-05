@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Module.Talks.Domain;
 using Module.Talks.Shared;
 using Shared.Contracts.Events;
@@ -15,8 +14,7 @@ internal sealed class GetTalkUseCase(
     TalksDbContext db,
     IEventsModuleApi eventsApi,
     IVenuesModuleApi venuesApi,
-    IPeopleModuleApi peopleApi,
-    ILogger<GetTalkUseCase> logger) : IUseCase<GetTalkRequest, GetTalkResponse>
+    IPeopleModuleApi peopleApi) : IUseCase<GetTalkRequest, GetTalkResponse>
 {
     public async Task<Result<GetTalkResponse>> HandleAsync(GetTalkRequest request, CancellationToken cancellationToken)
     {
@@ -46,34 +44,24 @@ internal sealed class GetTalkUseCase(
             .FirstOrDefaultAsync(cancellationToken);
         if (talk is null)
         {
-            logger.LogInformation("Palestra {TalkId} não encontrada para detalhamento", request.TalkId);
             return TalksErrors.TalkNotFound;
         }
 
-        logger.LogDebug("Consultando módulo Eventos para enriquecer evento {EventId} e trilha {TrackId} da palestra {TalkId}", talk.EventId, talk.TrackId, talk.Id);
         var eventEntity = await eventsApi.GetEventSummaryAsync(talk.EventId, cancellationToken);
         var track = await eventsApi.GetTrackSummaryAsync(talk.EventId, talk.TrackId, cancellationToken);
         RoomSummary? room;
         if (talk.RoomId.HasValue)
         {
-            logger.LogDebug("Consultando módulo Locais para enriquecer sala {RoomId} da palestra {TalkId}", talk.RoomId, talk.Id);
             room = await venuesApi.GetRoomSummaryAsync(talk.RoomId.Value, cancellationToken);
         }
         else
         {
-            logger.LogDebug("Palestra {TalkId} não possui sala; chamada ao módulo Locais ignorada", talk.Id);
             room = null;
         }
         var personIds = talk.Speakers.Select(x => x.PersonId).Distinct().ToList();
-        logger.LogDebug("Consultando módulo Pessoas para enriquecer {SpeakerCount} palestrante(s) da palestra {TalkId}", personIds.Count, talk.Id);
         var people = await peopleApi.GetPeopleSummaryAsync(personIds, cancellationToken);
         var names = people.ToDictionary(p => p.Id, p => p.PersonName);
-        logger.LogInformation(
-            "Palestra {TalkId} carregada com {SpeakerCount} palestrante(s), {ContentCount} conteúdo(s), {AttendanceCount} presença(s) e {CertificateCount} certificado(s); referências ausentes: evento={MissingEvent}, trilha={MissingTrack}, sala={MissingRoom}, pessoas={MissingPersonCount}",
-            talk.Id, talk.Speakers.Count, talk.Contents.Count, talk.AttendancesCount, talk.CertificatesCount,
-            eventEntity is null, track is null, talk.RoomId.HasValue && room is null, personIds.Count(id => !names.ContainsKey(id)));
 
-        logger.LogDebug("Mapeando {SpeakerCount} palestrante(s) e {ContentCount} conteúdo(s) para a resposta", talk.Speakers.Count, talk.Contents.Count);
         return new GetTalkResponse(
             talk.Id,
             talk.EventId,
