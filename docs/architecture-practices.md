@@ -210,7 +210,7 @@ O contrato de entrega está em ADR-005. O que decidir ao criar um evento:
 
 **`requiresConsumer`.** `true` quando a ausência de consumidor é falha de configuração — o efeito é obrigatório. `false` para evento observacional. Escolha explicitamente; o padrão é `true`.
 
-**Idempotência é do consumidor.** A entrega é pelo menos uma vez e a ordem não é garantida entre réplicas. O consumidor precisa de deduplicação própria por evento e consumidor, ou de efeito naturalmente idempotente — a auditoria usa a chave do evento com `INSERT ON CONFLICT`. Deduplicação de broker, quando houver um no futuro, não substitui isso.
+**Idempotência por evento e consumidor vem da Inbox.** A entrega é pelo menos uma vez e a ordem não é garantida entre réplicas. Handler registrado por `AddIntegrationEventHandler` grava `(EventId, Consumer)` na transação do próprio efeito; isso vale para escrita no `DbContext` do módulo consumidor. Efeito fora dele precisa de idempotência no destino, e o opt-out (`[SkipInbox]`) exige justificativa — a auditoria usa a chave do evento com `INSERT ON CONFLICT`. Deduplicação de broker, quando houver um no futuro, não substitui isso.
 
 **Escopo e falha.** Cada mensagem recebe um escopo DI isolado; handlers da mesma mensagem compartilham o escopo e devem ser independentes entre si. Falha de um handler repete a mensagem inteira — projete para isso. Esgotadas as tentativas, a mensagem vai para dead letter, que é terminal; replay é ação administrativa com `reasonCode` e registro do ator, nunca automática.
 

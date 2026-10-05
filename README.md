@@ -109,7 +109,7 @@ flowchart TB
     Probe["OutboxProbe"] -. "pending, dead letters and<br/>age of the oldest one" .-> P
 ```
 
-Delivery is at least once and preserves no order across replicas, so every consumer has to be idempotent per event and per consumer. Auditing does that with the event key and `INSERT ON CONFLICT`. Each module has its own delivery sequence; `Outbox:MaxConcurrentDeliveries` caps the active deliveries per process. Dead letter is terminal: replay takes an administrator, records the actor and a `reasonCode`, and never happens on its own.
+Delivery is at least once and preserves no order across replicas. Handlers registered with `AddIntegrationEventHandler` run in their own scope behind an Inbox: `(EventId, Consumer)` is written in the same transaction as the handler effect, so a redelivered message does not apply a finished handler again. Auditing opts out explicitly with `[SkipInbox]`, because the event key with `INSERT ON CONFLICT` already makes its effect idempotent. Each module has its own delivery sequence; `Outbox:MaxConcurrentDeliveries` caps the active deliveries per process. Dead letter is terminal: replay takes an administrator, records the actor and a `reasonCode`, and never happens on its own.
 
 ## Create a new project
 

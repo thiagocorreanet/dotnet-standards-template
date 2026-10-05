@@ -140,7 +140,7 @@ O registro é por varredura de assembly, inclusive da policy: o `Module` não re
 - **Soft delete é filtro global nomeado.** `IsActive`/`DeletedAt` são preenchidos pelo interceptor. Consultar registros excluídos exige `IgnoreQueryFilters` deliberado, não remoção do filtro.
 - **O validator roda antes do delegate do endpoint.** Identificadores de rota são materializados no request por reflexão: a propriedade precisa ser `Guid` gravável e terminar em `Id`. Rota `{id}` preenche o primeiro identificador vazio; rotas nomeadas casam pelo nome da propriedade.
 - **A chave de `[Command]` define o conjunto serializado.** Todos os escritores que compartilham uma invariante precisam declarar a mesma chave, inclusive rotinas de manutenção. Escritas com a mesma chave são serializadas: isso é custo deliberado, não alto throughput. Chave por recurso (`{EventId}`) só serve quando a invariante não depende de outro recurso; propriedade usada em placeholder precisa de `NotEmpty` no Validator, porque valor vazio é contrato violado (500). Uma chave por comando; o exemplo mantém a chave compartilhada `event-management-example` (ADR-004).
-- **Outbox entrega pelo menos uma vez e não preserva ordem entre réplicas.** Todo consumidor precisa ser idempotente por evento/consumidor.
+- **Outbox entrega pelo menos uma vez e não preserva ordem entre réplicas.** Handler registrado por `AddIntegrationEventHandler` já nasce idempotente: a Inbox grava `(EventId, Consumer)` na mesma transação do efeito, no `DbContext` do módulo. Isso só cobre escrita nesse `DbContext`; efeito em outro lugar precisa de idempotência no destino. Opt-out é explícito, com `[SkipInbox("justificativa")]`. Fixe `[InboxConsumer("nome")]` antes de renomear um handler.
 - **Pacotes são centralizados e travados.** Dependência nova entra em `api/Directory.Packages.props`, com `PackageReference` sem versão no projeto, e exige atualizar os `packages.lock.json` (`dotnet restore` grava; o CI roda `--locked-mode`).
 
 ## Comandos
@@ -166,7 +166,7 @@ Integração e testes funcionais sobem PostgreSQL real por Testcontainers; Docke
 - [ ] Consultas projetam apenas o necessário, têm ordenação estável e usam `TagWith` com constante.
 - [ ] Erro novo tem código estável `Module.Reason` e o `ErrorType` correspondente ao status HTTP desejado.
 - [ ] Nenhum dado pessoal, token ou payload foi para log, métrica, trace ou auditoria.
-- [ ] Evento novo tem `[EventContract]`, consumidor idempotente e decisão explícita sobre `requiresConsumer`.
+- [ ] Evento novo tem `[EventContract]`, consumidor registrado por `AddIntegrationEventHandler` (Inbox) ou com `[SkipInbox]` justificado, e decisão explícita sobre `requiresConsumer`.
 - [ ] Idioma respeitado: identificador em inglês, mensagem e documentação em pt-BR, `README.md` em inglês.
 - [ ] Testes cobrem regra, rejeição de acesso indevido e o risco de concorrência quando existir.
 - [ ] `cd api && dotnet test` passou.

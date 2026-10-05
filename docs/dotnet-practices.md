@@ -418,7 +418,10 @@ public sealed record PersonCreated(Guid PersonId) : IntegrationEvent;
 
 - O nome `context.fact.v1` é estável e independe do nome CLR. Remover a v1 antes de drenar mensagens antigas é mudança incompatível.
 - `requiresConsumer: true` significa que a ausência de consumidor é falha; use quando o efeito for obrigatório.
-- **Todo consumidor precisa ser idempotente** por evento e por consumidor. A auditoria usa chave do evento com `INSERT ON CONFLICT`.
+- **Registre o handler com `AddIntegrationEventHandler`.** Ele roda em escopo próprio e passa pela Inbox: `(EventId, Consumer)` é gravado na mesma transação do efeito, e a repetição da mensagem não reaplica o handler. Grave pelo `DbContext` do módulo e chame `SaveChangesAsync`; não abra outra transação nem chame `ExecuteUpdate`/`ExecuteDelete` fora do contexto.
+- A Inbox não cobre efeito fora desse `DbContext` (outro módulo, serviço externo): ali a idempotência continua sendo do destino.
+- `[SkipInbox("justificativa")]` só quando o efeito já é idempotente no destino. A auditoria usa a chave do evento com `INSERT ON CONFLICT` e por isso abre mão da Inbox.
+- Fixe `[InboxConsumer("nome-estável")]` antes de renomear a classe ou o namespace do handler; sem isso, o nome muda e eventos repetidos são reaplicados.
 - Cada mensagem recebe um escopo DI isolado; handlers da mesma mensagem compartilham esse escopo e devem ser independentes. Falha de um handler repete a mensagem inteira.
 - Dead letter é terminal explícito; replay é administrativo, exige `reasonCode` e registra o ator.
 
