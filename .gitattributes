@@ -1,0 +1,5 @@
+# Normaliza texto no repositório; no checkout, cada sistema usa o fim de linha próprio.
+* text=auto
+# Executados dentro de contêineres Linux: CRLF quebra o shebang (ex.: "bash\r") e o init do PostgreSQL local.
+*.sh text eol=lf
+Dockerfile text eol=lf
