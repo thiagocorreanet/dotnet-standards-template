@@ -109,13 +109,13 @@ Dentro de um módulo, as camadas existem como **pastas com regra de dependência
 | Transporte HTTP e documentação | `UseCases/<Name>/*Endpoint.cs` | O contrato `IUseCase`, nada de regra |
 | Formato de entrada | `UseCases/<Name>/*Validator.cs` | O request e helpers do módulo |
 | Infraestrutura do módulo | `Shared/` | EF Core, DI, o domínio, handlers |
-| Contrato entre módulos | `Shared.Contracts/` | Somente DTOs e interfaces |
+| Contrato entre módulos | `Shared.Contracts.Modules/` (genéricos em `Shared.Contracts`) | Somente DTOs e interfaces |
 
 `internal` limita acesso por assembly. Como cada módulo é um assembly, `internal` é uma fronteira real aqui: casos de uso, endpoints, validators e policies são `internal`; só o `IModule`, o `DbContext` e a implementação do contrato público precisam ser `public`.
 
 Pasta e namespace localizam código; não impedem acoplamento. Por isso as fronteiras que importam têm teste em `Tests.Architecture`: dependência entre módulos, independência do `Domain`, ausência de repositório, convenções de nome e namespace de casos de uso. Ao criar um módulo, ele entra automaticamente nesses testes pela descoberta de assemblies — não há lista para manter.
 
-Contratos vivem junto de quem precisa deles: `IPeopleModuleApi` está em `Shared.Contracts` porque os consumidores são outros módulos; a implementação `PeopleModuleApi` está no módulo dono. Essa é a regra de dependência invertida na prática, sem criar um projeto por camada.
+Contratos vivem junto de quem precisa deles: `IPeopleModuleApi` está em `Shared.Contracts.Modules` porque os consumidores são outros módulos; a implementação `PeopleModuleApi` está no módulo dono. Essa é a regra de dependência invertida na prática, sem criar um projeto por camada.
 
 <a id="5-solid"></a>
 ## 5. SOLID aplicado com critério

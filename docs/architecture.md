@@ -147,6 +147,44 @@ Os dumps de demonstração comprovam restauração lógica local, não disaster 
 
 **Condição que justifica rever:** comandos que precisem coordenar dois recursos ao mesmo tempo, ou contenção medida na chave do módulo.
 
+## ADR-010 — Bibliotecas Shared.* distribuídas como pacotes
+
+**Título e data:** pacotes NuGet para as bibliotecas genéricas, 2026-10-05.
+
+**Problema e restrições:**
+- Cada projeto gerado recebia uma cópia de ~3 mil linhas de `Shared.*`; correção na base precisava ser repetida em cada projeto.
+- O repositório do template precisa continuar desenvolvendo `Shared.*` como projetos.
+- `Shared.Contracts` misturava contratos genéricos com contratos dos módulos de cada projeto.
+
+**Decisão:**
+- **Pacotes:** `Shared.Kernel`, `Contracts`, `Data`, `Http`, `Messaging`, `Observability` e `WebHost` viram pacotes `Shared.<Nome>` com o prefixo de `SharedPackagePrefix`, versão SemVer única (1.0.0 inicial), SourceLink e PDB embutido.
+- **Contratos dos módulos:** vão para `Shared.Contracts.Modules`, que fica no projeto, com os mesmos namespaces. O registro de eventos procura nos assemblies `Shared.Contracts*`.
+- **Referências:** projetos declaram `SharedReference`, que vira `ProjectReference` na origem e `PackageReference` no gerado (`UseSharedPackages`).
+- **Feed:** GitHub Packages, com `packageSourceMapping` (só os pacotes da base vêm do feed privado) e credenciais por variável de ambiente e secret de build.
+- **Publicação:** workflow manual `release-packages`, com job de publicação no environment `packages` (aprovação).
+- **Identity e Audit:** `Module.Identity` e `Module.Audit` continuam código-fonte no projeto. As migrações vivem no assembly do módulo, e o projeto precisa poder evoluir schema, regras e endpoints.
+- **Nomes neutros no código compartilhado:** a chave da connection string passa a ser `ConnectionStrings:Database` e as anotações de auditoria, `Shared:*`. O código empacotado não acompanha mais a troca de nome do template.
+
+**Alternativas consideradas:**
+- Pacote também para Identity/Audit: atualização central, mas migrações e regras presas à versão do pacote.
+- Submódulo Git: acoplamento de build e fluxo mais difícil para o dev.
+- Manter a cópia: o custo de propagar correções continuaria por projeto.
+
+**Benefício esperado:** correção de infraestrutura propagada por troca de versão; o dev mexe só nos módulos.
+
+**Custos e limitações aceitos:**
+- **Credenciais:** feed privado exige credencial em máquina, CI e build de imagem.
+- **Migrações:** versões que mudam convenções de modelo exigem migração nova em cada módulo.
+- **Testes:** os testes de arquitetura do projeto usam alguns internals (`InternalsVisibleTo`); os testes das bibliotecas ficam só na origem.
+- **Lock files:** não são copiados; o primeiro `restore` do projeto gera os seus.
+- **Configuração:** a chave da connection string mudou (incompatível; registrado no `CHANGELOG.md`).
+
+**Evidência e forma de verificar:**
+- `test-template.mjs` empacota num feed em pasta, gera os três projetos consumindo os pacotes e recusa biblioteca copiada, prefixo renomeado ou solução listando as bibliotecas.
+- O workflow de release valida versão, `CHANGELOG`, testes e template antes de publicar.
+
+**Condição que justifica rever:** necessidade de versões independentes por biblioteca, ou de distribuir Identity/Audit de forma central.
+
 ## Referências de implementação
 
 - [EF Core: resiliência e commit indeterminado](https://learn.microsoft.com/en-us/ef/core/miscellaneous/connection-resiliency).

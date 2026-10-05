@@ -22,7 +22,8 @@ Não é arquitetura em camadas por projeto (`Domain`/`Application`/`Infrastructu
 ```text
 api/src/hosts/Host.Api          composição, comandos migrate e bootstrap-identity
 api/src/modules/Module.<Name>   um módulo: Domain/, Shared/, UseCases/<Name>/
-api/src/shared/Shared.Contracts contratos entre módulos, eventos, ICurrentUser, PagedResult
+api/src/shared/Shared.Contracts contratos genéricos: ICurrentUser, PagedResult, identidade, eventos de integração, auditoria
+api/src/shared/Shared.Contracts.Modules  I<Name>ModuleApi e eventos dos módulos deste projeto (não é pacote)
 api/src/shared/Shared.Kernel    Result/Error, BaseEntity e interfaces de entidade; sem ASP.NET nem EF
 api/src/shared/Shared.Data      ModuleDbContext, interceptors, Outbox, migrações
 api/src/shared/Shared.Http      IUseCase, IEndpoint, IAccessPolicy, decorators, validação
@@ -78,10 +79,10 @@ Estas regras protegem correção, segurança ou integridade dos dados. Quebrar q
 | Quem pode agir sobre o recurso | `<Name>AccessPolicy`, no mesmo diretório do caso de uso |
 | Regra de acesso repetida entre policies (ex.: "é organizador do evento") | serviço pequeno em `Module.<Name>/Shared/`, sem classe base |
 | Mapeamento EF de uma entidade | `Module.<Name>/Shared/Configurations/` |
-| Contrato consumido por outro módulo | `Shared.Contracts/<Name>/I<Name>ModuleApi.cs` |
-| Evento publicado para outros módulos | `Shared.Contracts/<Name>/` com `[EventContract("context.fact.v1")]` |
+| Contrato consumido por outro módulo | `Shared.Contracts.Modules/<Name>/I<Name>ModuleApi.cs` |
+| Evento publicado para outros módulos | `Shared.Contracts.Modules/<Name>/` com `[EventContract("context.fact.v1")]` |
 | Consumidor de evento de outro módulo | `Module.<Name>/Shared/Handlers/` |
-| Capacidade genérica reutilizável por qualquer módulo | `Shared.*`, sem citar nome de módulo de negócio |
+| Capacidade genérica reutilizável por qualquer módulo | `Shared.*` no repositório da base, sem citar nome de módulo de negócio; o projeto gerado recebe como pacote (ADR-010) |
 
 ## Anatomia de um caso de uso
 
@@ -143,6 +144,7 @@ O registro é por varredura de assembly, inclusive da policy: o `Module` não re
 - **O validator roda antes do delegate do endpoint.** Identificadores de rota são materializados no request por reflexão: a propriedade precisa ser `Guid` gravável e terminar em `Id`. Rota `{id}` preenche o primeiro identificador vazio; rotas nomeadas casam pelo nome da propriedade.
 - **A chave de `[Command]` define o conjunto serializado.** Todos os escritores que compartilham uma invariante precisam declarar a mesma chave, inclusive rotinas de manutenção. Escritas com a mesma chave são serializadas: isso é custo deliberado, não alto throughput. Chave por recurso (`{EventId}`) só serve quando a invariante não depende de outro recurso; propriedade usada em placeholder precisa de `NotEmpty` no Validator, porque valor vazio é contrato violado (500). Uma chave por comando; o exemplo mantém a chave compartilhada `event-management-example` (ADR-004).
 - **Outbox entrega pelo menos uma vez e não preserva ordem entre réplicas.** Handler registrado por `AddIntegrationEventHandler` já nasce idempotente: a Inbox grava `(EventId, Consumer)` na mesma transação do efeito, no `DbContext` do módulo. Isso só cobre escrita nesse `DbContext`; efeito em outro lugar precisa de idempotência no destino. Opt-out é explícito, com `[SkipInbox("justificativa")]`. Fixe `[InboxConsumer("nome")]` antes de renomear um handler.
+- **Shared.* chega como pacote no projeto gerado.** As sete bibliotecas genéricas vêm do feed da base (`api/nuget.config`, versão em `SharedPackagesVersion`); `Shared.Contracts.Modules`, os módulos, o host e os testes são código do projeto. Não copie código de `Shared.*` para dentro do projeto para "corrigir": corrija na base e publique versão nova. Atualização: [`docs/upgrading.md`](docs/upgrading.md). Referencie uma biblioteca com `<SharedReference Include="Data" />`, nunca `ProjectReference`/`PackageReference` direto.
 - **Pacotes são centralizados e travados.** Dependência nova entra em `api/Directory.Packages.props`, com `PackageReference` sem versão no projeto, e exige atualizar os `packages.lock.json` (`dotnet restore` grava; o CI roda `--locked-mode`).
 
 ## Comandos

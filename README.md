@@ -260,6 +260,7 @@ Issues and pull requests are welcome. Before opening a PR:
 - Run `cd api && dotnet test`. Integration and functional tests start a real PostgreSQL through Testcontainers, so Docker has to be available.
 - Read the invariants in [`CLAUDE.md`](CLAUDE.md). Breaking one is a defect, not a matter of style, and `Tests.Architecture` refuses dependencies between modules and generic repositories.
 - Keep the language split: identifiers, routes, JSON, events and error codes in English; human-facing messages, comments and documentation in pt-BR, with this README in English.
+- Generated projects consume the generic `Shared.*` libraries as NuGet packages from the base feed (`api/nuget.config`, version in `SharedPackagesVersion`), not as copied code. Fix them in the base repository and release a new version; see `docs/upgrading.md`.
 - A new dependency goes into `api/Directory.Packages.props`, with a `PackageReference` carrying no version, and requires updated `packages.lock.json` files, because CI runs `--locked-mode`.
 - A new pattern (broker, repository, another process) requires an ADR in [`docs/architecture.md`](docs/architecture.md) with a concrete driver.
 - If the change touches the template, run `node scripts/test-template.mjs`, which generates and tests both modes in a temporary folder.

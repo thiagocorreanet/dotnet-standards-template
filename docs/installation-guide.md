@@ -10,7 +10,7 @@ A geração padrão entrega `Host.Api`, os módulos `Module.Identity` e `Module.
 
 Os módulos de exemplo `Module.Venues`, `Module.People`, `Module.Events` e `Module.Talks` só acompanham o projeto quando você escolhe `--includeExample true`.
 
-O novo projeto recebe uma **cópia do código**, sem referência de execução à pasta do template. A partir daí, suas alterações são independentes. Atualizar o template não atualiza automaticamente projetos já gerados; melhorias futuras precisam ser comparadas e incorporadas conscientemente.
+O novo projeto recebe uma **cópia do código** dos módulos, do host, dos testes, da infra e dos docs, sem referência de execução à pasta do template. As bibliotecas `Shared.*` genéricas chegam como **pacotes NuGet** do feed da base (`--packageFeed`, padrão GitHub Packages; versão em `--sharedPackagesVersion`), e são atualizadas trocando a versão: veja [`upgrading.md`](upgrading.md). O restante não se atualiza sozinho; melhorias do template em módulos, infra e docs precisam ser comparadas e incorporadas conscientemente.
 
 Não são copiados `.env`, `.local/`, `.secrets/`, `.git/`, `bin/`, `obj/`, resultados de testes, artefatos, documentação histórica de origem nem `.template.config/`. Assim, o projeto novo não se torna automaticamente outro template instalável. Mantenha a base original como fonte das próximas gerações.
 
@@ -87,13 +87,20 @@ A solução será `api/BillingApi.slnx`; o serviço será `BillingApi.Api`. A ch
 
 ## 5. Restaurar, compilar e executar os testes
 
+Defina as credenciais do feed dos pacotes da base (usuário do GitHub e token com `read:packages`; detalhes em [`upgrading.md`](upgrading.md)):
+
+```bash
+export MODULARAPI_FEED_USER=<usuario-github>
+export MODULARAPI_FEED_TOKEN=<token-read-packages>
+```
+
 Na raiz do projeto novo:
 
 ```bash
 cd api
 dotnet --version
 dotnet tool restore
-dotnet restore BillingApi.slnx
+dotnet restore BillingApi.slnx    # primeira vez: grava os packages.lock.json; faça commit deles
 dotnet build BillingApi.slnx --no-restore
 dotnet test BillingApi.slnx --no-restore
 cd ..
