@@ -18,7 +18,7 @@ Consequência: deploy e recursos são compartilhados. Testes arquiteturais prote
 
 Nenhuma senha de usuário ou chave de emissão JWT é armazenada pela API. Discovery/JWKS validam assinatura RSA, issuer exato, audience, expiração e tipo Bearer; `sub` é texto opaco. Identidade local = `(issuer, subject)` único → Guid interno.
 
-Roles são apenas as do client da API e de uma allowlist; claims internas recebidas são removidas. A API decide propriedade e regras de recurso. Um token autenticado sem vínculo local ativo não entra.
+Roles vêm do caminho configurado em `Oidc:RoleClaimPath` (padrão: client roles do Keycloak, `resource_access.{audience}.roles`), passam pelo mapa opcional `Oidc:RoleMap` e pela allowlist `Oidc:AllowedRoles`; claims internas recebidas são removidas. A exigência de `typ` é configurável (padrão `Bearer`) para IdPs que não emitem essa claim, com os riscos descritos em `security.md`. A allowlist configurada substitui a padrão: até esta revisão, o binder acrescentava os valores configurados aos três perfis padrão, e a configuração não conseguia reduzir a lista. A API decide propriedade e regras de recurso. Um token autenticado sem vínculo local ativo não entra.
 
 Conta desativada e tokens anteriores ao corte local são rejeitados no próximo request. Remoção de role somente no IdP pode levar até 300 s + 15 s de skew; alteração urgente exige também corte local. Logout do provedor não invalida instantaneamente JWT já emitido.
 

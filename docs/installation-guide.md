@@ -172,6 +172,7 @@ Quando adaptar esses valores, revise conjuntamente:
 - `compose.local.yaml`, `compose.production.yaml` e `appsettings*.json`: issuer, audience e configuração do host.
 - `scripts/init-local.mjs`, `bootstrap-local.mjs`, `wait-local.mjs`, `smoke-oidc.mjs` e demais verificações: os valores da fixture são explícitos nesses arquivos.
 - `DefaultRoles`, `Policies`, `Oidc:AllowedRoles` e testes: padrão `Administrator`, `Organizer`, `Participant`.
+- `Oidc:RoleClaimPath`, `Oidc:RoleMap` e `Oidc:RequireTokenType`, quando o IdP não for Keycloak com client roles. Exemplos e pontos a validar em [`security.md`](security.md).
 
 Faça essas escolhas antes de criar um ambiente definitivo. A importação de `realm.json` ocorre na criação inicial; editar o arquivo não atualiza automaticamente um realm já existente. Uma troca de issuer também exige revisar os vínculos `(issuer, subject)` da API. Não apague banco/volume para aplicar mudanças de roles.
 

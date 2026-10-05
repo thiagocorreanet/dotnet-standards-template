@@ -11,10 +11,68 @@
 - Access token 300 s, refresh rotation, proteção contra força bruta e eventos administrativos habilitados.
 - Realm de referência exige verificação de e-mail e cadastro TOTP. O gerador **local** remove essas exigências somente para o smoke automatizado. Configuração de SMTP, política de senha, MFA do fluxo/browser e MFA administrativo devem ser exercitadas no IdP real.
 - A API aceita exclusivamente issuer configurado, valida audience/assinatura/exp/iat/tipo e consulta vínculo local ativo a cada requisição.
-- Roles válidas: resource_access[audience].roles ∩ allowlist. Realm roles e claims app_role/app_user_id vindas do token não concedem privilégios.
+- Roles válidas, no padrão: `resource_access[audience].roles` ∩ allowlist. Realm roles e claims `app_role`/`app_user_id` vindas do token não concedem privilégios. O caminho, o mapa e a exigência de `typ` são configuráveis (ver "Perfis e outros provedores OIDC").
 - Os valores técnicos padrão são `Administrator`, `Organizer` e `Participant`, com essa capitalização. Os rótulos em português neste documento descrevem seus significados; não são aliases aceitos no token. Um realm antigo precisa de migração administrativa explícita, sem exclusão de volumes.
 
 Não guarde tokens em logs, autenticação persistente do Scalar, localStorage, scripts de shell ou arquivos. O Scalar só é exposto em desenvolvimento, com persistência de autenticação desabilitada e sem tokens pré-preenchidos. O teste OIDC os mantém apenas em memória. A API não oferece endpoint de login ou senha.
+
+## Perfis e outros provedores OIDC
+
+A leitura de perfis é configurada em `Oidc`. O Keycloak com client roles continua o padrão, e as validações de assinatura, issuer, audience, `iat`/`exp`, vínculo local e remoção de claims internas não mudam com essas opções.
+
+| Opção | Padrão | Efeito |
+|---|---|---|
+| `RoleClaimPath` | `resource_access.{audience}.roles` | Primeiro segmento é a claim; os demais percorrem o JSON dela. `{audience}` vira `Oidc:Audience`. Até 6 segmentos; `app_role`/`app_user_id` são recusados. |
+| `RoleMap` | vazio | Perfil externo → perfil interno, comparação exata. Sem entrada, o valor passa como veio. |
+| `AllowedRoles` | `DefaultRoles.All` | Allowlist aplicada **depois** do mapa. Quando configurada, substitui o padrão; valores fora de `DefaultRoles` falham no startup. |
+| `RequireTokenType` / `TokenType` | `true` / `Bearer` | Exige `typ` no payload. É a defesa que recusa o id token do Keycloak. |
+
+Configuração ausente ou caminho inexistente no token resultam em nenhum perfil (o usuário segue autenticado, sem role). Claim de perfis com JSON inválido, ou com raiz que não é objeto num caminho aninhado, recusa o token.
+
+**Sobreposição de arrays.** O .NET combina arrays por índice entre fontes de configuração. Por isso `AllowedRoles` não fica no `appsettings.json`: `Oidc__AllowedRoles__0=Administrator` numa variável de ambiente resulta exatamente em `[Administrator]`. Se você listar perfis num arquivo, sobrescreva todos os índices na fonte seguinte.
+
+### Keycloak (verificado: testes unitários e de integração)
+
+Client roles do client da API (padrão, nada a configurar):
+
+```json
+"Oidc": { "RoleClaimPath": "resource_access.{audience}.roles" }
+```
+
+Realm roles, quando o realm é dedicado à aplicação. Num realm compartilhado, qualquer usuário com a realm role ganha o perfil em todas as aplicações:
+
+```json
+"Oidc": { "RoleClaimPath": "realm_access.roles" }
+```
+
+### Microsoft Entra ID (a validar)
+
+Nada abaixo foi verificado contra um tenant real nesta base. O formato `roles` em array é o que os testes unitários cobrem; o restante são pontos a confirmar no ambiente antes de produção.
+
+```json
+"Oidc": {
+  "Authority": "https://login.microsoftonline.com/<tenant-id>/v2.0",
+  "Audience": "<application-id-da-api>",
+  "RoleClaimPath": "roles",
+  "RoleMap": { "Api.Administrator": "Administrator", "Api.Organizer": "Organizer" },
+  "RequireTokenType": false,
+  "MaxAccessTokenLifetimeSeconds": 600
+}
+```
+
+A confirmar:
+- **Issuer:** que o `iss` emitido é idêntico ao `Authority`, já que a API exige igualdade exata.
+- **Audience:** o valor de `aud` do access token da API (id da aplicação ou `api://…`).
+- **`typ`:** a ausência de `typ` no payload. Se ela se confirmar, desligar a exigência só é seguro com registros de aplicação separados para cliente e API: com um único registro, o id token teria a mesma audience da API.
+- **Validade do token:** a política de vida do token. A API recusa access token com mais de `MaxAccessTokenLifetimeSeconds` (máximo 600 s), e o padrão do Entra costuma ser maior. Sem uma política de 10 minutos no tenant, todo token será recusado.
+- **Grupos:** com `groups`, mapeie os identificadores em `RoleMap`. Usuário com muitos grupos pode receber um token sem a lista completa.
+
+### gov.br (a validar)
+
+Não confirmamos o formato de claims do gov.br para APIs de terceiros. Antes de adotar, verifique pelo menos:
+- se o access token é um JWT validável por JWKS, com `iss`, `aud`, `iat`, `exp` e `typ` compatíveis com as regras acima;
+- o que vai em `sub`. **Se for CPF**, o subject passa a ser dado pessoal: ele é gravado no vínculo local `(issuer, subject)` e precisa de revisão de privacidade em logs, auditoria e retenção;
+- se existe claim de perfis da aplicação. Se não houver, os perfis precisam de outra fonte, e isso exige uma decisão (ADR) antes da implementação: esta base só lê perfis do token.
 
 ## Provisionamento e emergência
 
