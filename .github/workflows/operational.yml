@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: { persist-credentials: false }
       - run: node scripts/init-local.mjs
-      - run: docker compose -f compose.local.yaml --profile observability up -d --build
+      - run: docker compose -f compose.local.yaml -f compose.observability.yaml up -d --build
       - run: node scripts/bootstrap-local.mjs
       - run: node scripts/wait-local.mjs
       - run: node scripts/smoke-observability.mjs
@@ -26,7 +26,7 @@ jobs:
       - run: node scripts/restore-drill.mjs
       - name: Stop only this job's stack (preserve volumes)
         if: always()
-        run: docker compose -f compose.local.yaml --profile observability down
+        run: docker compose -f compose.local.yaml -f compose.observability.yaml down
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:

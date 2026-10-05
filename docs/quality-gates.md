@@ -22,7 +22,7 @@ O workflow `codeql` analisa C# e workflows em push, pull request e semanalmente;
 
 O workflow `operational-release-checks` provisiona uma fixture local nova no runner, verifica OIDC real/telemetria, imagem em Production e restore lógico. Executa manualmente, em tags v* e semanalmente. O workflow `verify` testa também semanalmente para reconsultar vulnerabilidades sem depender de alterações de código.
 
-O ambiente local precisa dos serviços de `compose.local.yaml --profile observability`. `init-local.mjs` só serve para uma fixture nova: não sobrescreve credenciais. Em ambiente já provisionado, preserve .env/.local e volumes.
+O ambiente local precisa do modo completo (`compose.local.yaml` + `compose.observability.yaml`); o modo lite não tem Collector nem Grafana para os smokes de observabilidade. `init-local.mjs` só serve para uma fixture nova: não sobrescreve credenciais. Em ambiente já provisionado, preserve .env/.local e volumes.
 
 Os workflows não realizam deploy. Configurar proteções/regras de promoção no provedor Git, executar o workflow remoto e exigir seu resultado são etapas de administração ainda externas. Não publicar .env, dumps, secrets ou logs brutos como artifacts; o job operacional retém somente manifestos de restore.
 

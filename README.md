@@ -139,11 +139,13 @@ Do not reuse `bin/`, `obj/`, `.env`, volumes or databases across projects. After
 
 ```bash
 node scripts/init-local.mjs
-docker compose -f compose.local.yaml --profile observability up --build -d
+docker compose -f compose.local.yaml -f compose.observability.yaml up --build -d
 node scripts/bootstrap-local.mjs
 node scripts/smoke-oidc.mjs
 node scripts/smoke-observability.mjs
 ```
+
+That is the **full** mode. For day-to-day work on use cases, the **lite** mode runs only PostgreSQL, Keycloak and the API: `docker compose -f compose.local.yaml up --build -d`, then `node scripts/wait-local.mjs --lite`. With no collector, the OTLP endpoint is empty, so the API exports nothing and logs to the console. Both modes share the same `.env` and volumes.
 
 Wait for the realm import before the bootstrap. If Keycloak is not ready yet, repeat **only the bootstrap**, not the credential generation. It accepts an empty identity base only, and never re-elevates users on restart.
 
@@ -151,8 +153,8 @@ Wait for the realm import before the bootstrap. If Keycloak is not ready yet, re
 |---|---|
 | API / development Scalar | http://localhost:5761/scalar |
 | Keycloak | http://identity.localhost:8080 |
-| Grafana, user `operator` | http://localhost:3000 |
-| Prometheus | http://localhost:9090 |
+| Grafana, user `operator` (full mode) | http://localhost:3000 |
+| Prometheus (full mode) | http://localhost:9090 |
 | PostgreSQL | `127.0.0.1:55432` |
 
 Scalar is the default interface in generated projects too. The root `/` redirects to `/scalar`; the contracts stay at `/openapi/v1.json` and `/openapi/v1.yaml`. UI and contracts are published only in `Development` with `OpenApi:Enabled=true`. Swagger UI was removed.
@@ -165,12 +167,12 @@ Passwords are random and live in `.env` (0600). The API demo account is `develop
 
 The realm import is initial: editing realm.json does not update an existing realm. Make changes through Keycloak's administrative process, and do not delete volumes to apply one.
 
-If `.env` and the initial binding already exist **in this English version**, resume with `docker compose -f compose.local.yaml --profile observability up --build -d` alone. Do not run init-local or bootstrap again. An environment created before the move to English is not automatically compatible: keep it and use a new project and database, or an explicit migration plan.
+If `.env` and the initial binding already exist **in this English version**, resume with `docker compose -f compose.local.yaml -f compose.observability.yaml up --build -d` (or the lite command) alone. Do not run init-local or bootstrap again. An environment created before the move to English is not automatically compatible: keep it and use a new project and database, or an explicit migration plan.
 
 To stop while preserving data:
 
 ```bash
-docker compose -f compose.local.yaml --profile observability down
+docker compose -f compose.local.yaml -f compose.observability.yaml down
 ```
 
 Do not use `down -v` if you want to keep databases, history and telemetry.

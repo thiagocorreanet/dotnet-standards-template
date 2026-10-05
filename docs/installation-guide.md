@@ -115,14 +115,32 @@ O script cria `.env` com permissão restrita e senhas aleatórias, arquivos priv
 
 Não copie `.env`, `.local/` nem volumes da base. Não inclua esses arquivos em Git, tickets, mensagens ou imagens Docker. O script recusa sobrescrever `.env`; isso protege as credenciais ligadas aos volumes existentes.
 
-Suba a stack com observabilidade:
+Há dois modos locais:
+
+| Modo | Serviços | Quando usar |
+|---|---|---|
+| **Lite** (`compose.local.yaml`) | PostgreSQL, Keycloak e API | Dia a dia de desenvolvimento de casos de uso: sobe mais rápido e usa menos memória. A API não exporta OTLP (endpoint vazio) e os logs ficam no console (`docker compose logs api`). |
+| **Completo** (+ `compose.observability.yaml`) | Lite + Collector, Prometheus, Tempo, Loki e Grafana | Investigar traces, métricas e logs correlacionados, mexer em telemetria ou alertas, e antes de liberar mudanças de observabilidade (`smoke-observability.mjs`). |
+
+Modo lite:
 
 ```bash
-docker compose -f compose.local.yaml --profile observability up --build -d
+docker compose -f compose.local.yaml up --build -d
+node scripts/wait-local.mjs --lite
+node scripts/bootstrap-local.mjs
+docker compose -f compose.local.yaml ps -a
+```
+
+Modo completo:
+
+```bash
+docker compose -f compose.local.yaml -f compose.observability.yaml up --build -d
 node scripts/wait-local.mjs
 node scripts/bootstrap-local.mjs
-docker compose -f compose.local.yaml --profile observability ps -a
+docker compose -f compose.local.yaml -f compose.observability.yaml ps -a
 ```
+
+Os dois modos usam o mesmo projeto Compose, o mesmo `.env` e os mesmos volumes; dá para alternar sem perder dados. Ao voltar do completo para o lite, pare com os dois arquivos para também remover os contêineres de observabilidade.
 
 O job `migrate` aplica os schemas e concede permissões limitadas à identidade runtime. `migrate` e `telemetry-init` encerrados com código `0` são esperados: são jobs, não serviços permanentes.
 
@@ -214,13 +232,13 @@ Os workflows ficam em `.github/workflows/`. Eles acompanham a cópia, mas só ex
 Para parar a stack deste projeto preservando os volumes:
 
 ```bash
-docker compose -f compose.local.yaml --profile observability down
+docker compose -f compose.local.yaml -f compose.observability.yaml down
 ```
 
 Para retomá-la:
 
 ```bash
-docker compose -f compose.local.yaml --profile observability up --build -d
+docker compose -f compose.local.yaml -f compose.observability.yaml up --build -d
 node scripts/wait-local.mjs
 ```
 
@@ -240,7 +258,7 @@ Não execute `init-local` nem o bootstrap novamente se já foram concluídos. **
 | API retorna `403` | Confira role do client correto, allowlist e propriedade do recurso; role no realm não basta |
 | Bootstrap informa base já provisionada | Não repita o provisionamento; gerencie o usuário existente pelo fluxo administrativo |
 | Scalar não aparece em produção | Esperado por segurança. Use-o apenas em desenvolvimento |
-| Smoke de telemetria falha | Confira o profile `observability`, readiness e tempo de exportação; não desative os controles de privacidade |
+| Smoke de telemetria falha | Confira se a stack subiu no modo completo (`-f compose.observability.yaml`), readiness e tempo de exportação; não desative os controles de privacidade |
 
 ## 14. Banco legado e produção
 
