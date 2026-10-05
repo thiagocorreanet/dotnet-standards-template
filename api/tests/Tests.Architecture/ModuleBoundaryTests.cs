@@ -62,7 +62,8 @@ public sealed class ModuleBoundaryTests
             .That()
             .ResideInNamespaceStartingWith($"{moduleNamespace}.Domain")
             .Should()
-            .OnlyHaveDependenciesOn("System", "Shared.Kernel", "Shared.Contracts", $"{moduleNamespace}.Domain")
+            // O rastreador do Coverlet é injetado nos assemblies quando a suíte coleta cobertura (CI e test-template).
+            .OnlyHaveDependenciesOn("System", "Shared.Kernel", "Shared.Contracts", $"{moduleNamespace}.Domain", "Coverlet.Core.Instrumentation")
             .GetResult();
 
         AssertSuccess(result, $"O Domain de {moduleNamespace} só pode depender de System.*, Shared.Kernel e Shared.Contracts");
